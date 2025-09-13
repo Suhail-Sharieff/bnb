@@ -2,6 +2,7 @@ import React, { Suspense, useState, FC,} from "react";
 import { Eye, EyeOff, Lock, Mail, Shield, GitBranch, Users, ShieldCheck } from 'lucide-react';
 import { apiClient } from "../lib/api";// Import your actual API client
 import Dashboard from "./Dashboard";
+import Signup from "./Signup";
 
 // --- LAZY-LOADED SPLINE COMPONENT ---
 const Spline = React.lazy(() => import('@splinetool/react-spline'));
@@ -169,19 +170,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToSignup }) => {
     );
 };
 
-// Placeholder Signup Component
-const Signup: FC<SignupProps> = ({ onSignupSuccess, onSwitchToLogin }) => {
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
-            <div className="max-w-md w-full p-8 bg-gray-800 rounded-xl border border-gray-700 text-center">
-                <h2 className="text-3xl font-bold mb-4">Sign Up</h2>
-                <p className="text-gray-400 mb-6">This is a placeholder for the signup form.</p>
-                <button onClick={() => onSignupSuccess("fake-signup-token")} className="w-full bg-indigo-600 py-3 rounded-lg mb-4">Complete Sign Up</button>
-                <button onClick={onSwitchToLogin} className="text-indigo-400 hover:underline">Already have an account? Log in</button>
-            </div>
-        </div>
-    );
-};
 
 
 
