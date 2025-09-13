@@ -54,13 +54,13 @@ const Header: React.FC<HeaderProps> = ({ activeView, onViewChange, onLogout }) =
              <div className="relative">
                 <img
                   className="h-10 w-10 rounded-full object-cover border-2 border-gray-600"
-                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"
+                  src="https://static.vecteezy.com/system/resources/previews/013/042/571/original/default-avatar-profile-icon-social-media-user-photo-in-flat-style-vector.jpg"
                   alt="User avatar"
                 />
                 <span className="absolute bottom-0 right-0 block h-2.5 w-2.5 rounded-full bg-green-400 ring-2 ring-gray-900" />
              </div>
              <div className="hidden lg:block">
-                 <p className="text-sm font-medium text-gray-50">Alex Greyston</p>
+                 <p className="text-sm font-medium text-gray-50">Welcome!</p>
                  <p className="text-xs text-gray-400">Administrator</p>
              </div>
              <button 
