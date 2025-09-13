@@ -25,7 +25,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-900">
       <Header activeView={activeView} onViewChange={setActiveView} />
       
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -33,13 +33,13 @@ function App() {
       </main>
       
       {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-16">
+      <footer className="bg-gray-900 border-t border-gray-700 mt-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-400">
               Veritas Ledger - Powered by blockchain technology for radical financial transparency
             </p>
-            <div className="flex items-center space-x-4 text-xs text-gray-500">
+            <div className="flex items-center space-x-4 text-xs text-gray-400">
               <span>🔒 Blockchain Secured</span>
               <span>🤖 AI Monitored</span>
               <span>🌐 Publicly Auditable</span>

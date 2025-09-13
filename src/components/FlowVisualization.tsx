@@ -1,115 +1,207 @@
-import React, { useEffect, useRef } from 'react';
-import { mockDepartments, generateFlowData } from '../data/mockData';
+import React, { useState, useLayoutEffect, useRef } from 'react';
+import { mockDepartments } from '../data/mockData';
+import { cn } from '../lib/utils'; // Assumes a utility function for conditional classes
+import { CheckCircle, MousePointerClick, Filter, Download } from 'lucide-react';
 
-const FlowVisualization: React.FC = () => {
-  const sankeyRef = useRef<HTMLDivElement>(null);
-  const treemapRef = useRef<HTMLDivElement>(null);
+// --- Helper Functions & Data ---
+const formatCurrency = (amount: number): string => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+};
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
+const totalBudget = mockDepartments.reduce((sum, dept) => sum + dept.allocated, 0);
 
-  useEffect(() => {
-    // For MVP, we'll create a simplified visual representation
-    // In a full implementation, this would use D3.js or Plotly.js
-    
-    if (sankeyRef.current) {
-      const flowData = generateFlowData();
-      const totalBudget = mockDepartments.reduce((sum, dept) => sum + dept.allocated, 0);
-      
-      sankeyRef.current.innerHTML = `
-        <div class="space-y-4">
-          <div class="text-center">
-            <div class="inline-block bg-indigo-100 text-indigo-800 px-6 py-3 rounded-lg font-semibold">
-              Total Budget: ${formatCurrency(totalBudget)}
-            </div>
-          </div>
-          
-          <div class="flex justify-center">
-            <div class="w-2 h-16 bg-gradient-to-b from-indigo-500 to-transparent"></div>
-          </div>
-          
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-            ${mockDepartments.map(dept => `
-              <div class="text-center">
-                <div class="bg-white border-2 border-${dept.color === '#3B82F6' ? 'blue' : dept.color === '#EF4444' ? 'red' : dept.color === '#10B981' ? 'green' : 'yellow'}-500 rounded-lg p-4">
-                  <h4 class="font-semibold text-gray-900">${dept.name}</h4>
-                  <p class="text-sm text-gray-600">${formatCurrency(dept.allocated)}</p>
-                  <div class="mt-2 w-full bg-gray-200 rounded-full h-2">
-                    <div class="bg-${dept.color === '#3B82F6' ? 'blue' : dept.color === '#EF4444' ? 'red' : dept.color === '#10B981' ? 'green' : 'yellow'}-500 h-2 rounded-full" 
-                         style="width: ${Math.min((dept.spent / dept.allocated) * 100, 100)}%"></div>
-                  </div>
-                  <p class="text-xs mt-1 ${dept.remaining < 0 ? 'text-red-600' : 'text-green-600'}">
-                    ${dept.remaining < 0 ? 'Over by ' + formatCurrency(Math.abs(dept.remaining)) : 'Remaining: ' + formatCurrency(dept.remaining)}
-                  </p>
-                </div>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      `;
-    }
+// Map hex colors to Tailwind classes for better maintainability
+const colorMap: { [key: string]: { bg: string; border: string; text: string } } = {
+  '#3B82F6': { bg: 'bg-blue-500', border: 'border-blue-400', text: 'text-blue-300' },
+  '#EF4444': { bg: 'bg-red-500', border: 'border-red-400', text: 'text-red-300' },
+  '#10B981': { bg: 'bg-green-500', border: 'border-green-400', text: 'text-green-300' },
+  '#F59E0B': { bg: 'bg-amber-500', border: 'border-amber-400', text: 'text-amber-300' },
+};
 
-    if (treemapRef.current) {
-      const totalBudget = mockDepartments.reduce((sum, dept) => sum + dept.allocated, 0);
-      
-      treemapRef.current.innerHTML = `
-        <div class="grid grid-cols-2 gap-2 h-64">
-          ${mockDepartments.map(dept => {
-            const percentage = (dept.allocated / totalBudget) * 100;
-            const heightClass = percentage > 30 ? 'row-span-2' : 'row-span-1';
-            const bgColor = dept.color === '#3B82F6' ? 'bg-blue-500' : 
-                           dept.color === '#EF4444' ? 'bg-red-500' : 
-                           dept.color === '#10B981' ? 'bg-green-500' : 'bg-yellow-500';
-            
-            return `
-              <div class="${heightClass} ${bgColor} rounded-lg p-4 text-white flex flex-col justify-center items-center">
-                <h4 class="font-bold text-lg">${dept.name}</h4>
-                <p class="text-sm opacity-90">${formatCurrency(dept.allocated)}</p>
-                <p class="text-xs opacity-75">${percentage.toFixed(1)}%</p>
-              </div>
-            `;
-          }).join('')}
-        </div>
-      `;
-    }
+// --- SVG Path Component for the Flow Diagram ---
+
+interface PathData {
+  id: string;
+  d: string;
+  stroke: string;
+  strokeWidth: number;
+}
+
+const SankeyDiagram: React.FC = () => {
+  const sourceRef = useRef<HTMLDivElement>(null);
+  const destRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [paths, setPaths] = useState<PathData[]>([]);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  useLayoutEffect(() => {
+    const calculatePaths = () => {
+      if (!sourceRef.current || !containerRef.current) return;
+
+      const containerRect = containerRef.current.getBoundingClientRect();
+      const sourceRect = sourceRef.current.getBoundingClientRect();
+      const startX = sourceRect.right - containerRect.left;
+      const startY = sourceRect.top - containerRect.top + sourceRect.height / 2;
+
+      const newPaths = mockDepartments.map((dept, index) => {
+        const destEl = destRefs.current[index];
+        if (!destEl) return null;
+
+        const destRect = destEl.getBoundingClientRect();
+        const endX = destRect.left - containerRect.left;
+        const endY = destRect.top - containerRect.top + destRect.height / 2;
+
+        const controlX1 = startX + (endX - startX) * 0.5;
+        const controlY1 = startY;
+        const controlX2 = startX + (endX - startX) * 0.5;
+        const controlY2 = endY;
+
+        const d = `M ${startX} ${startY} C ${controlX1} ${controlY1}, ${controlX2} ${controlY2}, ${endX} ${endY}`;
+        const strokeWidth = (dept.allocated / totalBudget) * 60; // Max width of 60px
+
+        return {
+          id: dept.id,
+          d,
+          stroke: dept.color,
+          strokeWidth: Math.max(strokeWidth, 2), // Min width of 2px
+        };
+      }).filter((p): p is PathData => p !== null);
+
+      setPaths(newPaths);
+    };
+
+    calculatePaths();
+    window.addEventListener('resize', calculatePaths);
+    return () => window.removeEventListener('resize', calculatePaths);
   }, []);
 
   return (
-    <div className="space-y-8">
+    <div ref={containerRef} className="relative grid grid-cols-3 gap-8 items-center min-h-[400px]">
+      {/* SVG Container for Paths */}
+      <svg className="absolute top-0 left-0 w-full h-full z-0" style={{ pointerEvents: 'none' }}>
+        <defs>
+          {paths.map(p => (
+            <linearGradient key={p.id} id={`grad-${p.id}`} x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" style={{ stopColor: p.stroke, stopOpacity: 0.1 }} />
+              <stop offset="100%" style={{ stopColor: p.stroke, stopOpacity: 0.6 }} />
+            </linearGradient>
+          ))}
+        </defs>
+        <g>
+          {paths.map(p => (
+            <path
+              key={p.id}
+              d={p.d}
+              fill="none"
+              stroke={`url(#grad-${p.id})`}
+              strokeWidth={p.strokeWidth}
+              className={cn(
+                "transition-all duration-300",
+                hoveredId && hoveredId !== p.id ? 'opacity-20' : 'opacity-100'
+              )}
+            />
+          ))}
+        </g>
+      </svg>
+      
+      {/* Source Node */}
+      <div ref={sourceRef} onMouseEnter={() => setHoveredId('source')} onMouseLeave={() => setHoveredId(null)} className="z-10 col-span-1 bg-indigo-500/20 text-indigo-300 px-6 py-4 rounded-lg font-semibold border-2 border-indigo-500 text-center transition-all hover:shadow-2xl hover:border-indigo-300 cursor-pointer">
+        <p className="text-sm">Total Budget</p>
+        <p className="text-xl">{formatCurrency(totalBudget)}</p>
+      </div>
+
+      {/* Destination Nodes */}
+      <div className="z-10 col-span-2 space-y-2">
+        {mockDepartments.map((dept, index) => {
+          const colors = colorMap[dept.color] || colorMap['#3B82F6'];
+          return (
+            <div
+              key={dept.id}
+              ref={el => destRefs.current[index] = el}
+              onMouseEnter={() => setHoveredId(dept.id)}
+              onMouseLeave={() => setHoveredId(null)}
+              className={cn(
+                "bg-gray-800/80 backdrop-blur-sm p-3 rounded-md border transition-all duration-300 cursor-pointer",
+                colors.border,
+                hoveredId === dept.id ? 'scale-105 shadow-lg' : '',
+                hoveredId && hoveredId !== dept.id && hoveredId !== 'source' ? 'opacity-50' : 'opacity-100'
+              )}
+            >
+              <p className="font-bold text-gray-50 text-sm">{dept.name}</p>
+              <p className={cn("font-semibold", colors.text)}>{formatCurrency(dept.allocated)}</p>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  );
+};
+
+
+const FlowVisualization: React.FC = () => {
+  return (
+    <div className="space-y-8 animate-fadeIn">
       {/* Sankey-style Flow Diagram */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6">Budget Flow Visualization</h3>
-        <div ref={sankeyRef} className="min-h-[300px]"></div>
-        <p className="text-sm text-gray-600 mt-4 text-center">
-          This simplified flow shows how the total budget is allocated across departments. 
-          In the full implementation, this would be an interactive Sankey diagram showing detailed fund flows.
+      <div className="bg-gray-800 p-6 rounded-xl shadow-md border border-gray-700">
+        <h3 className="text-lg font-semibold text-gray-50 mb-4 text-center">Budget Flow Visualization</h3>
+        <SankeyDiagram />
+        <p className="text-sm text-gray-500 mt-4 text-center">
+          Flow thickness is proportional to budget allocation. Hover over a department to highlight its path.
         </p>
       </div>
 
       {/* Treemap-style Proportion View */}
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6">Budget Proportions (Treemap Style)</h3>
-        <div ref={treemapRef}></div>
-        <p className="text-sm text-gray-600 mt-4 text-center">
-          Each rectangle's size represents the department's budget allocation relative to the total budget.
+      <div className="bg-gray-800 p-6 rounded-xl shadow-md border border-gray-700">
+        <h3 className="text-lg font-semibold text-gray-50 mb-6 text-center">Budget Proportions (Treemap Style)</h3>
+        <div className="grid grid-cols-3 grid-rows-2 gap-2 h-72">
+          {mockDepartments.map((dept, index) => {
+            const percentage = (dept.allocated / totalBudget) * 100;
+            // Simple logic for grid span, can be made more dynamic
+            const spanClass = index === 0 ? 'col-span-2' : 'col-span-1';
+
+            return (
+              <div
+                key={dept.id}
+                className={cn(
+                  spanClass,
+                  'rounded-lg p-4 text-white flex flex-col justify-center items-center transition-transform hover:scale-105 hover:z-10'
+                )}
+                style={{ background: `linear-gradient(to top right, ${dept.color}BB, ${dept.color}FF)` }}
+              >
+                <h4 className="font-bold text-lg">{dept.name}</h4>
+                <p className="text-sm opacity-90">{formatCurrency(dept.allocated)}</p>
+                <p className="text-xs font-semibold opacity-80 bg-black/30 px-2 py-0.5 rounded-full mt-1">
+                  {percentage.toFixed(1)}%
+                </p>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-sm text-gray-500 mt-6 text-center">
+          Each rectangle's size represents its budget allocation relative to the total.
         </p>
       </div>
 
       {/* Interactive Features Demo */}
-      <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-xl border border-green-200">
-        <h3 className="text-lg font-semibold text-green-900 mb-3">🔍 Interactive Features (Full Version)</h3>
-        <div className="space-y-2 text-green-800">
-          <p>• Click on any department to drill down into specific transactions</p>
-          <p>• Hover over flow connections to see detailed amounts and percentages</p>
-          <p>• Filter by date range, transaction type, or vendor</p>
-          <p>• Export visualizations and underlying data for external analysis</p>
-          <p>• Real-time updates as new transactions are added to the blockchain</p>
+      <div className="bg-gradient-to-r from-gray-800 to-emerald-900/30 p-6 rounded-xl border border-emerald-800">
+        <h3 className="text-lg font-semibold text-emerald-300 mb-4">🔍 Interactive Features (Full Version)</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-emerald-200">
+            {[
+                { icon: MousePointerClick, text: "Drill down into specific transactions by clicking a department." },
+                { icon: Filter, text: "Filter by date range, transaction type, or vendor." },
+                { icon: Download, text: "Export visualizations and data for external analysis." },
+                { icon: CheckCircle, text: "Get real-time updates as new transactions hit the blockchain." }
+            ].map(item => (
+                <div key={item.text} className="flex items-center gap-3 bg-emerald-900/40 p-3 rounded-lg">
+                    <item.icon className="w-5 h-5 text-emerald-400 flex-shrink-0"/>
+                    <p className="text-sm">{item.text}</p>
+                </div>
+            ))}
         </div>
       </div>
     </div>
