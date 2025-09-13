@@ -1,0 +1,30 @@
+{
+  "name": "blockchain-budget-verifier",
+  "version": "1.0.0",
+  "description": "A Node.js script to verify budget data integrity using blockchain technology",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "deploy": "node deploy.js",
+    "test": "node index.js"
+  },
+  "keywords": [
+    "blockchain",
+    "ethereum",
+    "polygon",
+    "budget",
+    "verification",
+    "ethers",
+    "smart-contract"
+  ],
+  "author": "Blockchain Budget Verifier",
+  "license": "MIT",
+  "dependencies": {
+    "crypto": "^1.0.1",
+    "dotenv": "^16.6.1",
+    "ethers": "^6.15.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
