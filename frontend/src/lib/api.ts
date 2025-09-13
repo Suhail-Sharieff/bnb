@@ -1,6 +1,7 @@
 // API configuration and helper functions
 // Backend server runs from the backend directory
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = 'https://bnb-3izz.onrender.com';
+// const API_BASE_URL = 'http://localhost:3000';
 
 interface ApiResponse<T> {
   success: boolean;
