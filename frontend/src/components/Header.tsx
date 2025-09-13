@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Shield, TrendingUp, Users, AlertTriangle, LogOut, Settings } from 'lucide-react';
+import { NotificationBell, NotificationPanel } from './NotificationSystem';
 import { cn } from '../lib/utils'; // Assumes a utility function for conditional classes
 
 interface HeaderProps {
@@ -9,6 +10,8 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ activeView, onViewChange, onLogout }) => {
+  const [showNotifications, setShowNotifications] = useState(false);
+  
   const navItems = [
     { id: 'overview', label: 'Overview', icon: TrendingUp },
     { id: 'flow', label: 'Fund Flow', icon: Shield },
@@ -51,6 +54,7 @@ const Header: React.FC<HeaderProps> = ({ activeView, onViewChange, onLogout }) =
 
           {/* Right Section: User Profile & Actions */}
           <div className="flex items-center space-x-4">
+             <NotificationBell onClick={() => setShowNotifications(true)} />
              <div className="relative">
                 <img
                   className="h-10 w-10 rounded-full object-cover border-2 border-gray-600"
@@ -93,6 +97,11 @@ const Header: React.FC<HeaderProps> = ({ activeView, onViewChange, onLogout }) =
               </button>
             ))}
           </nav>
+          
+      <NotificationPanel 
+        isOpen={showNotifications} 
+        onClose={() => setShowNotifications(false)} 
+      />
     </header>
   );
 };

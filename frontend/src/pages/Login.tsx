@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Mail, Shield } from 'lucide-react';
-import { apiClient } from '../lib/api';
-import ConnectionTest from '../components/ConnectionTest';
+import { useAuth } from '../contexts/AuthContext';
 
 interface LoginFormData {
   email: string;
@@ -14,12 +14,9 @@ interface LoginErrors {
   general?: string;
 }
 
-interface LoginProps {
-  onLoginSuccess: (token: string) => void;
-  onSwitchToSignup?: () => void;
-}
-
-const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToSignup }) => {
+const Login: React.FC = () => {
+  const { login, loading, error } = useAuth();
+  
   const [formData, setFormData] = useState<LoginFormData>({
     email: '',
     password: ''
@@ -27,8 +24,6 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToSignup }) => {
   
   const [errors, setErrors] = useState<LoginErrors>({});
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [showConnectionTest, setShowConnectionTest] = useState(false);
 
   // Email validation regex
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -46,8 +41,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToSignup }) => {
     // Password validation
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters long';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters long';
     }
 
     setErrors(newErrors);
@@ -77,37 +72,12 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToSignup }) => {
       return;
     }
 
-    setIsLoading(true);
-    setErrors({});
-
     try {
-      // Call the actual authentication API
-      const response = await apiClient.login({
-        email: formData.email,
-        password: formData.password
-      });
-      
-      if (response.success && response.data) {
-        console.log('Login successful:', response.data.user.email);
-        
-        // Store user info in localStorage (optional)
-        localStorage.setItem('userInfo', JSON.stringify(response.data.user));
-        
-        // Call the onLoginSuccess callback with the actual JWT token
-        onLoginSuccess(response.data.token);
-      } else {
-        setErrors({
-          general: response.message || 'Login failed. Please try again.'
-        });
-      }
-      
+      await login(formData.email, formData.password);
     } catch (error: any) {
-      console.error('Login error:', error);
       setErrors({
-        general: error.message || 'Login failed. Please check your connection and try again.'
+        general: error.message || 'Login failed. Please check your credentials and try again.'
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -128,15 +98,15 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToSignup }) => {
               Welcome Back
             </h2>
             <p className="mt-2 text-sm text-gray-400">
-              Sign in to your blockchain budget verifier account
+              Sign in to your financial transparency platform
             </p>
           </div>
 
           {/* General Error */}
-          {errors.general && (
+          {(errors.general || error) && (
             <div className="mb-4 p-3 bg-red-900/20 border border-red-800 rounded-md">
               <p className="text-sm text-red-400">
-                {errors.general}
+                {errors.general || error}
               </p>
             </div>
           )}
@@ -221,50 +191,43 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess, onSwitchToSignup }) => {
             {/* Submit Button */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={loading}
               className="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {isLoading ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
+              {loading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                   Signing in...
-                </>
+                </div>
               ) : (
-                'Sign In'
+                'Sign in'
               )}
             </button>
           </form>
 
-          {/* Footer */}
-          <div className="mt-6 text-center space-y-3">
+          {/* Demo Credentials */}
+          <div className="mt-6 p-4 bg-gray-700 rounded-lg">
+            <h3 className="text-sm font-medium text-gray-300 mb-2">Demo Credentials:</h3>
+            <div className="text-xs text-gray-400 space-y-1">
+              <div>Admin: admin@demo.com / demo123</div>
+              <div>Vendor: vendor@demo.com / demo123</div>
+            </div>
+          </div>
+
+          {/* Signup Link */}
+          <div className="mt-6 text-center">
             <p className="text-sm text-gray-400">
               Don't have an account?{' '}
-              <button
-                onClick={onSwitchToSignup}
-                className="font-medium text-indigo-400 hover:text-indigo-300 focus:outline-none focus:underline"
+              <a
+                href="/signup"
+                className="font-medium text-indigo-400 hover:text-indigo-300 focus:outline-none focus:underline transition-colors"
               >
-                Sign up here
-              </button>
+                Create one here
+              </a>
             </p>
-            
-            {/* Connection Test Button */}
-            <button
-              onClick={() => setShowConnectionTest(true)}
-              className="text-xs text-gray-500 hover:text-gray-400 underline"
-            >
-              Test Backend Connection
-            </button>
           </div>
         </div>
       </div>
-      
-      {/* Connection Test Modal */}
-      {showConnectionTest && (
-        <ConnectionTest onClose={() => setShowConnectionTest(false)} />
-      )}
     </div>
   );
 };

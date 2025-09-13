@@ -1,5 +1,5 @@
 import React, { useState, useLayoutEffect, useRef } from 'react';
-import { mockDepartments } from '../data/mockData';
+import { useDepartments } from '../hooks/useApi';
 import { cn } from '../lib/utils'; // Assumes a utility function for conditional classes
 import { CheckCircle, MousePointerClick, Filter, Download } from 'lucide-react';
 
@@ -13,7 +13,7 @@ const formatCurrency = (amount: number): string => {
   }).format(amount);
 };
 
-const totalBudget = mockDepartments.reduce((sum, dept) => sum + dept.allocated, 0);
+// Remove the old totalBudget calculation
 
 // Map hex colors to Tailwind classes for better maintainability
 const colorMap: { [key: string]: { bg: string; border: string; text: string } } = {
@@ -38,6 +38,34 @@ const SankeyDiagram: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [paths, setPaths] = useState<PathData[]>([]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  
+  // Fetch real department data
+  const { data: departmentsData, loading } = useDepartments();
+  const departments = (departmentsData as any) || [];
+  const totalBudget = departments.reduce((sum: number, dept: any) => sum + (dept.allocated || 0), 0);
+  
+  // Show loading state
+  if (loading || departments.length === 0) {
+    return (
+      <div className="bg-gray-800 p-6 rounded-xl shadow-md border border-gray-700">
+        <h3 className="text-lg font-semibold text-gray-50 mb-4 text-center">Budget Flow Visualization</h3>
+        <div className="flex items-center justify-center h-64">
+          {loading ? (
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-gray-300">Loading department data...</p>
+            </div>
+          ) : (
+            <div className="text-center">
+              <Filter className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+              <p className="text-gray-300">No department data available</p>
+              <p className="text-gray-500 text-sm mt-2">Add departments to see budget flow visualization</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   useLayoutEffect(() => {
     const calculatePaths = () => {
@@ -48,7 +76,7 @@ const SankeyDiagram: React.FC = () => {
       const startX = sourceRect.right - containerRect.left;
       const startY = sourceRect.top - containerRect.top + sourceRect.height / 2;
 
-      const newPaths = mockDepartments.map((dept, index) => {
+      const newPaths = departments.map((dept: any, index: number) => {
         const destEl = destRefs.current[index];
         if (!destEl) return null;
 
@@ -70,7 +98,7 @@ const SankeyDiagram: React.FC = () => {
           stroke: dept.color,
           strokeWidth: Math.max(strokeWidth, 2), // Min width of 2px
         };
-      }).filter((p): p is PathData => p !== null);
+      }).filter((p: any): p is PathData => p !== null);
 
       setPaths(newPaths);
     };
@@ -78,8 +106,9 @@ const SankeyDiagram: React.FC = () => {
     calculatePaths();
     window.addEventListener('resize', calculatePaths);
     return () => window.removeEventListener('resize', calculatePaths);
-  }, []);
+  }, [departments, totalBudget]);
 
+  // ... rest of the component with real data
   return (
     <div ref={containerRef} className="relative grid grid-cols-3 gap-8 items-center min-h-[400px]">
       {/* SVG Container for Paths */}
@@ -117,7 +146,7 @@ const SankeyDiagram: React.FC = () => {
 
       {/* Destination Nodes */}
       <div className="z-10 col-span-2 space-y-2">
-        {mockDepartments.map((dept, index) => {
+        {departments.map((dept: any, index: number) => {
           const colors = colorMap[dept.color] || colorMap['#3B82F6'];
           return (
             <div
@@ -142,8 +171,11 @@ const SankeyDiagram: React.FC = () => {
   );
 };
 
-
 const FlowVisualization: React.FC = () => {
+  const { data: departmentsData, loading } = useDepartments();
+  const departments = (departmentsData as any) || [];
+  const totalBudget = departments.reduce((sum: number, dept: any) => sum + (dept.allocated || 0), 0);
+
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* Sankey-style Flow Diagram */}
@@ -155,27 +187,25 @@ const FlowVisualization: React.FC = () => {
         </p>
       </div>
 
-      {/* Treemap-style Proportion View */}
+      {/* Budget Allocation Treemap */}
       <div className="bg-gray-800 p-6 rounded-xl shadow-md border border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-50 mb-6 text-center">Budget Proportions (Treemap Style)</h3>
-        <div className="grid grid-cols-3 grid-rows-2 gap-2 h-72">
-          {mockDepartments.map((dept, index) => {
-            const percentage = (dept.allocated / totalBudget) * 100;
-            // Simple logic for grid span, can be made more dynamic
-            const spanClass = index === 0 ? 'col-span-2' : 'col-span-1';
-
+        <h3 className="text-lg font-semibold text-gray-50 mb-4 text-center">Budget Allocation Overview</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 h-48">
+          {departments.map((dept: any, index: number) => {
+            const percentage = totalBudget > 0 ? (dept.allocated / totalBudget) * 100 : 0;
+            const colors = colorMap[dept.color] || colorMap['#3B82F6'];
             return (
               <div
-                key={dept.id}
-                className={cn(
-                  spanClass,
-                  'rounded-lg p-4 text-white flex flex-col justify-center items-center transition-transform hover:scale-105 hover:z-10'
-                )}
-                style={{ background: `linear-gradient(to top right, ${dept.color}BB, ${dept.color}FF)` }}
+                key={dept.id || index}
+                className={cn("relative rounded-lg p-4 transition-all hover:scale-105 cursor-pointer", colors.bg)}
+                style={{ 
+                  height: `${Math.max(percentage * 2, 20)}%`,
+                  minHeight: '60px'
+                }}
               >
-                <h4 className="font-bold text-lg">{dept.name}</h4>
-                <p className="text-sm opacity-90">{formatCurrency(dept.allocated)}</p>
-                <p className="text-xs font-semibold opacity-80 bg-black/30 px-2 py-0.5 rounded-full mt-1">
+                <p className="font-bold text-white text-sm">{dept.name}</p>
+                <p className="text-white/90 text-xs">{formatCurrency(dept.allocated)}</p>
+                <p className="text-white/70 text-xs font-mono">
                   {percentage.toFixed(1)}%
                 </p>
               </div>
@@ -189,13 +219,13 @@ const FlowVisualization: React.FC = () => {
 
       {/* Interactive Features Demo */}
       <div className="bg-gradient-to-r from-gray-800 to-emerald-900/30 p-6 rounded-xl border border-emerald-800">
-        <h3 className="text-lg font-semibold text-emerald-300 mb-4">🔍 Interactive Features (Full Version)</h3>
+        <h3 className="text-lg font-semibold text-emerald-300 mb-4">🔍 Interactive Features</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-emerald-200">
             {[
                 { icon: MousePointerClick, text: "Drill down into specific transactions by clicking a department." },
                 { icon: Filter, text: "Filter by date range, transaction type, or vendor." },
                 { icon: Download, text: "Export visualizations and data for external analysis." },
-                { icon: CheckCircle, text: "Get real-time updates as new transactions hit the blockchain." }
+                { icon: CheckCircle, text: "Get real-time updates as new transactions are verified in the trust ledger." }
             ].map(item => (
                 <div key={item.text} className="flex items-center gap-3 bg-emerald-900/40 p-3 rounded-lg">
                     <item.icon className="w-5 h-5 text-emerald-400 flex-shrink-0"/>

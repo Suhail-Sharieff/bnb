@@ -3,7 +3,7 @@ import {
     BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, 
     PieChart, Pie, Cell, Sector 
 } from 'recharts';
-import { mockTransactions } from '../data/mockData';
+import { useBudgetTransactions, useDepartments } from '../hooks/useApi';
 import { cn } from '../lib/utils';
 
 // --- Helper Functions ---
@@ -81,6 +81,41 @@ const renderActiveShape = (props: ActiveShapeProps) => {
 
 const Analytics: React.FC = () => {
     const [activeIndex, setActiveIndex] = useState(0);
+    
+    // Fetch live data from API
+    const { data: transactionsData, loading: transactionsLoading, error: transactionsError } = useBudgetTransactions();
+    const { data: departmentsData, loading: departmentsLoading } = useDepartments();
+    
+    // Use ONLY live data - no fallback to mock data
+    const transactions = (transactionsData as any)?.transactions || [];
+    const isLoading = transactionsLoading || departmentsLoading;
+    
+    // Show loading state
+    if (isLoading) {
+        return (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 animate-fadeIn">
+                <div className="bg-gray-800 p-6 rounded-xl shadow-md border border-gray-700 flex items-center justify-center h-96">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+                <div className="bg-gray-800 p-6 rounded-xl shadow-md border border-gray-700 flex items-center justify-center h-96">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+            </div>
+        );
+    }
+    
+    // Show error state or empty state when no real data
+    if (transactionsError || transactions.length === 0) {
+        return (
+            <div className="bg-amber-900/20 border border-amber-500 rounded-xl p-6">
+                <h3 className="text-amber-400 font-semibold mb-2">No Analytics Data Available</h3>
+                <p className="text-amber-300 text-sm">
+                    {transactionsError ? `Error: ${transactionsError}` : 'No transaction data found in the database.'}
+                </p>
+                <p className="text-gray-400 text-sm mt-2">Please add some budget transactions to view analytics.</p>
+            </div>
+        );
+    }
 
     const onPieEnter = useCallback((_: any, index: number) => {
         setActiveIndex(index);
@@ -88,16 +123,18 @@ const Analytics: React.FC = () => {
     
     // Memoize data processing to prevent recalculations on re-render
     const { monthlyData, categoryData } = useMemo(() => {
-        const monthlySpending = mockTransactions.reduce((acc, tx) => {
-            const month = new Date(tx.timestamp).toLocaleString('default', { month: 'short' });
-            acc[month] = (acc[month] || 0) + tx.amount;
+        // Use the transactions array we defined above
+        const monthlySpending = transactions.reduce((acc: Record<string, number>, tx: any) => {
+            const month = new Date(tx.timestamp || tx.createdAt).toLocaleString('default', { month: 'short' });
+            acc[month] = (acc[month] || 0) + (tx.amount || 0);
             return acc;
-        }, {} as Record<string, number>);
+        }, {});
 
-        const spendingByCategory = mockTransactions.reduce((acc, tx) => {
-            acc[tx.category] = (acc[tx.category] || 0) + tx.amount;
+        const spendingByCategory = transactions.reduce((acc: Record<string, number>, tx: any) => {
+            const category = tx.category || 'Other';
+            acc[category] = (acc[category] || 0) + (tx.amount || 0);
             return acc;
-        }, {} as Record<string, number>);
+        }, {});
 
         const monthlyData = Object.keys(monthlySpending).map(month => ({
             name: month,
@@ -110,7 +147,7 @@ const Analytics: React.FC = () => {
         }));
 
         return { monthlyData, categoryData };
-    }, []);
+    }, [transactions]);
 
     const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
 

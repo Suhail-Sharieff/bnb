@@ -59,9 +59,42 @@ const budgetTransactionSchema = new mongoose.Schema({
   },
   approvalStatus: {
     type: String,
-    enum: ['pending', 'approved', 'rejected', 'completed'],
+    enum: ['pending', 'approved', 'rejected', 'allocated', 'completed', 'cancelled'],
     default: 'pending'
   },
+  
+  // Enhanced workflow fields
+  budgetRequestId: {
+    type: String,
+    trim: true
+  },
+  allocationId: {
+    type: String,
+    trim: true
+  },
+  vendorAddress: {
+    type: String,
+    trim: true
+  },
+  complianceDocuments: [{
+    filename: String,
+    hash: String,
+    uploadedAt: Date
+  }],
+  complianceMet: {
+    type: Boolean,
+    default: false
+  },
+  fundsReleased: {
+    type: Boolean,
+    default: false
+  },
+  releasedAmount: {
+    type: Number,
+    default: 0
+  },
+  allocatedAt: Date,
+  releasedAt: Date,
   
   // Cryptographic fields
   dataHash: {

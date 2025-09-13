@@ -194,6 +194,79 @@ app.get('/balance', async (req, res) => {
 });
 
 /**
+ * Get all budget transactions from database
+ * GET /api/budget/transactions
+ */
+app.get('/api/budget/transactions', authenticateToken, async (req, res) => {
+    try {
+        const { page = 1, limit = 10, department, status, search } = req.query;
+        
+        // Build query filter
+        const filter = {};
+        if (department) filter.department = new RegExp(department, 'i');
+        if (status) filter.approvalStatus = status;
+        if (search) {
+            filter.$or = [
+                { project: new RegExp(search, 'i') },
+                { submittedBy: new RegExp(search, 'i') },
+                { vendor: new RegExp(search, 'i') }
+            ];
+        }
+        
+        const transactions = await BudgetTransaction.find(filter)
+            .populate('createdBy', 'fullName email')
+            .populate('approvedBy', 'fullName email')
+            .sort({ createdAt: -1 })
+            .limit(parseInt(limit))
+            .skip((parseInt(page) - 1) * parseInt(limit));
+            
+        const total = await BudgetTransaction.countDocuments(filter);
+        
+        res.json({
+            success: true,
+            data: {
+                transactions,
+                pagination: {
+                    page: parseInt(page),
+                    limit: parseInt(limit),
+                    total,
+                    pages: Math.ceil(total / parseInt(limit))
+                }
+            }
+        });
+    } catch (error) {
+        console.error('❌ Failed to fetch transactions:', error.message);
+        res.status(500).json({
+            error: 'Failed to fetch transactions',
+            message: error.message
+        });
+    }
+});
+
+/**
+ * Get all departments from database
+ * GET /api/departments
+ */
+app.get('/api/departments', authenticateToken, async (req, res) => {
+    try {
+        const departments = await Department.find({ isActive: true })
+            .populate('headOfDepartment', 'fullName email')
+            .sort({ name: 1 });
+            
+        res.json({
+            success: true,
+            data: departments
+        });
+    } catch (error) {
+        console.error('❌ Failed to fetch departments:', error.message);
+        res.status(500).json({
+            error: 'Failed to fetch departments',
+            message: error.message
+        });
+    }
+});
+
+/**
  * User registration endpoint (MongoDB integrated)
  * POST /api/auth/signup
  */
@@ -210,10 +283,10 @@ app.post('/api/auth/signup', async (req, res) => {
         }
 
         // Validate role
-        if (!['admin', 'user'].includes(role)) {
+        if (!['admin', 'vendor'].includes(role)) {
             return res.status(400).json({
                 error: 'Invalid role',
-                message: 'Role must be either "admin" or "user"'
+                message: 'Role must be either "admin" or "vendor"'
             });
         }
 
@@ -352,6 +425,45 @@ app.post('/api/auth/login', async (req, res) => {
         res.status(500).json({
             error: 'Login failed',
             message: 'Internal server error during login'
+        });
+    }
+});
+
+/**
+ * Token validation endpoint
+ * GET /api/auth/validate
+ */
+app.get('/api/auth/validate', authenticateToken, async (req, res) => {
+    try {
+        // If we reach here, the token is valid (authenticateToken middleware passed)
+        const user = await User.findById(req.user.id).select('-password');
+        
+        if (!user || !user.isActive) {
+            return res.status(401).json({
+                error: 'User not found or inactive',
+                message: 'User account is no longer valid'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Token is valid',
+            data: {
+                user: {
+                    id: user._id,
+                    fullName: user.fullName,
+                    email: user.email,
+                    role: user.role,
+                    lastLogin: user.lastLogin,
+                    createdAt: user.createdAt
+                }
+            }
+        });
+    } catch (error) {
+        console.error('❌ Token validation failed:', error.message);
+        res.status(500).json({
+            error: 'Validation failed',
+            message: 'Internal server error during token validation'
         });
     }
 });

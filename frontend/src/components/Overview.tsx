@@ -6,9 +6,11 @@ import {
   PieChart, 
   ArrowRight 
 } from 'lucide-react';
-import { mockDepartments, mockTransactions } from '../data/mockData';
+import { useBudgetTransactions, useDepartments } from '../hooks/useApi';
 import { cn } from '../lib/utils'; // Assumes a utility function for conditional classes
 import Analytics from './Analytics';
+import FileUpload from './FileUpload';
+import { useNotifications } from './NotificationSystem';
 
 // --- Helper Functions ---
 const formatCurrency = (amount: number) => {
@@ -91,14 +93,75 @@ const DepartmentRow: React.FC<DepartmentRowProps> = ({ name, spent, allocated })
 // --- Main Overview Component ---
 
 const Overview: React.FC = () => {
-  const totalBudget = mockDepartments.reduce((sum, dept) => sum + dept.allocated, 0);
-  const totalSpent = mockDepartments.reduce((sum, dept) => sum + dept.spent, 0);
+  const { addNotification } = useNotifications();
+  
+  // Fetch real data from API
+  const { data: transactionsData, loading: transactionsLoading, error: transactionsError } = useBudgetTransactions();
+  const { data: departmentsData, loading: departmentsLoading, error: departmentsError } = useDepartments();
+  
+  // Use only real data - no mock data
+  const transactions = (transactionsData as any)?.transactions || [];
+  const departments = (departmentsData as any) || [];
+  
+  const isLoading = transactionsLoading || departmentsLoading;
+  const hasError = transactionsError || departmentsError;
+  
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="bg-gray-900 p-8 min-h-screen text-gray-200">
+        <div className="space-y-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className="bg-gray-800 p-6 rounded-xl shadow-md border border-gray-700 animate-pulse">
+                <div className="h-16 bg-gray-700 rounded"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show error state
+  if (hasError) {
+    return (
+      <div className="bg-gray-900 p-8 min-h-screen text-gray-200">
+        <div className="space-y-8 max-w-7xl mx-auto">
+          <div className="bg-red-900/20 border border-red-500 rounded-xl p-6">
+            <h3 className="text-red-400 font-semibold mb-2">Failed to Load Dashboard Data</h3>
+            <p className="text-red-300 text-sm">{transactionsError || departmentsError}</p>
+            <p className="text-gray-400 text-sm mt-2">Unable to fetch data from the database.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show empty state when no data
+  if (departments.length === 0 && transactions.length === 0) {
+    return (
+      <div className="bg-gray-900 p-8 min-h-screen text-gray-200">
+        <div className="space-y-8 max-w-7xl mx-auto">
+          <div className="bg-gray-800 rounded-xl border border-gray-700 p-12 text-center">
+            <DollarSign className="mx-auto w-16 h-16 text-gray-600 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-300 mb-2">No Budget Data Available</h3>
+            <p className="text-gray-500 mb-4">No departments or transactions have been added to the system yet.</p>
+            <p className="text-gray-500 text-sm">Add some budget data to see your dashboard come to life!</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  const totalBudget = departments.reduce((sum: number, dept: any) => sum + (dept.allocated || 0), 0);
+  const totalSpent = departments.reduce((sum: number, dept: any) => sum + (dept.spent || 0), 0);
   const totalRemaining = totalBudget - totalSpent;
-  const utilizationRate = (totalSpent / totalBudget) * 100;
+  const utilizationRate = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
 
-  const recentTransactions = mockTransactions
-    .filter(tx => tx.status === 'completed')
-    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  const recentTransactions = transactions
+    .filter((tx: any) => tx.status === 'completed')
+    .sort((a: any, b: any) => new Date(b.timestamp || b.createdAt).getTime() - new Date(a.timestamp || a.createdAt).getTime())
     .slice(0, 5);
 
   return (
@@ -117,8 +180,8 @@ const Overview: React.FC = () => {
           <div className="lg:col-span-2 bg-gray-800 p-6 rounded-xl shadow-md border border-gray-700">
             <h3 className="text-lg font-semibold text-gray-50 mb-4">Department Budget Status</h3>
             <div className="space-y-6">
-              {mockDepartments.map((dept) => (
-                <DepartmentRow key={dept.id} {...dept} />
+              {departments.map((dept: any) => (
+                <DepartmentRow key={dept.id || dept.name} {...dept} />
               ))}
             </div>
           </div>
@@ -127,8 +190,8 @@ const Overview: React.FC = () => {
           <div className="bg-gray-800 p-6 rounded-xl shadow-md border border-gray-700">
             <h3 className="text-lg font-semibold text-gray-50 mb-4">Recent Transactions</h3>
             <div className="space-y-4">
-              {recentTransactions.map((tx) => (
-                <div key={tx.id} className="flex items-center justify-between transition-all hover:bg-gray-700/60 p-2 rounded-md">
+              {recentTransactions.map((tx: any) => (
+                <div key={tx.id || tx._id} className="flex items-center justify-between transition-all hover:bg-gray-700/60 p-2 rounded-md">
                   <div className="flex-1">
                     <p className="font-medium text-gray-200 text-sm">{tx.description}</p>
                     <p className="text-xs text-gray-500">{tx.department}</p>
@@ -136,7 +199,7 @@ const Overview: React.FC = () => {
                   <div className="text-right">
                     <p className="font-semibold text-gray-50 text-sm">{formatCurrency(tx.amount)}</p>
                     <p className="text-xs text-gray-500">
-                      {new Date(tx.timestamp).toLocaleDateString()}
+                      {new Date(tx.timestamp || tx.createdAt).toLocaleDateString()}
                     </p>
                   </div>
                 </div>
@@ -148,6 +211,28 @@ const Overview: React.FC = () => {
             </div>
           </div>
         </div>
+        
+        {/* File Upload Section */}
+        <FileUpload 
+          onUploadSuccess={(file) => {
+            addNotification({
+              type: 'success',
+              title: 'File Uploaded Successfully',
+              message: `Document ${file.originalName || 'file'} has been uploaded and is ready for processing.`,
+              duration: 6000
+            });
+          }}
+          onUploadError={(error) => {
+            addNotification({
+              type: 'error',
+              title: 'Upload Failed',
+              message: error,
+              persistent: true
+            });
+          }}
+          folder="budget-documents"
+          maxSizeInMB={25}
+        />
 
         {/* AI-Generated Summary */}
         <div className="bg-gradient-to-r from-gray-800 to-indigo-900/30 p-6 rounded-xl border border-indigo-800">
@@ -155,8 +240,15 @@ const Overview: React.FC = () => {
           <p className="text-gray-300 leading-relaxed">
               For the current fiscal year, the total allocated budget is {formatCurrency(totalBudget)}. 
               Overall budget utilization stands at a healthy {utilizationRate.toFixed(1)}%. 
-              Key activity includes the Athletics Department exceeding its budget by {formatCurrency(Math.abs(mockDepartments.find(d => d.name === 'Athletics')?.remaining || 0))}, primarily due to unscheduled facility maintenance. 
-              Meanwhile, the Engineering Department has a utilization rate of {((mockDepartments[0].spent / mockDepartments[0].allocated) * 100).toFixed(1)}%, with major spending on new lab equipment.
+              {departments.length > 0 && (
+                <>
+                  Key activity includes departments managing their allocated budgets effectively.
+                  {departments[0] && departments[0].spent && departments[0].allocated && (
+                    <> The {departments[0].name || 'first'} Department has a utilization rate of {((departments[0].spent / departments[0].allocated) * 100).toFixed(1)}%.</>  
+                  )}
+                </>
+              )}
+              {transactions.length > 0 && ` Recent activity shows ${transactions.length} total transactions processed.`}
           </p>
         </div>
       </div>

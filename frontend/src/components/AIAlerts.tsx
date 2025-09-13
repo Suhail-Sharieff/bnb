@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { mockAnomalies, mockTransactions } from '../data/mockData';
+import { useBudgetTransactions } from '../hooks/useApi';
 import { cn } from '../lib/utils';
 import { AlertTriangle, Brain, TrendingUp, Clock, CheckCircle, Eye, Search, Edit, ShieldCheck, ChevronDown } from 'lucide-react';
 
@@ -28,7 +28,7 @@ const StatCard: React.FC<{ title: string; value: string | number; Icon: React.El
   </div>
 );
 
-const AlertCard: React.FC<{ alert: typeof mockAnomalies[0]; isExpanded: boolean; onToggle: () => void }> = ({ alert, isExpanded, onToggle }) => {
+const AlertCard: React.FC<{ alert: any; isExpanded: boolean; onToggle: () => void }> = ({ alert, isExpanded, onToggle }) => {
   const { Icon, darkClasses } = severityConfig[alert.severity as keyof typeof severityConfig];
   
   return (
@@ -82,7 +82,41 @@ const formatDate = (timestamp: string) => new Date(timestamp).toLocaleDateString
 
 // --- Main Component ---
 const AIAlerts: React.FC = () => {
-  const [selectedAlertId, setSelectedAlertId] = useState<string | null>(mockAnomalies[0]?.id || null);
+  // Fetch real data from API
+  const { data: transactionsData, loading, error } = useBudgetTransactions();
+  const transactions = (transactionsData as any)?.transactions || [];
+  
+  // Filter anomalous transactions from real data
+  const anomalousTransactions = transactions.filter((tx: any) => tx.isAnomalous || tx.anomalyScore > 0.7);
+  
+  const [selectedAlertId, setSelectedAlertId] = useState<string | null>(anomalousTransactions[0]?.id || anomalousTransactions[0]?._id || null);
+  
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="space-y-8 animate-fadeIn">
+        <div className="bg-gray-800 rounded-xl border border-gray-700 p-8 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+            <p className="text-gray-300">Loading AI analysis...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Show error state
+  if (error) {
+    return (
+      <div className="space-y-8 animate-fadeIn">
+        <div className="bg-red-900/20 border border-red-500 rounded-xl p-6">
+          <h3 className="text-red-400 font-semibold mb-2">Failed to Load AI Alerts</h3>
+          <p className="text-red-300 text-sm">{error}</p>
+          <p className="text-gray-400 text-sm mt-2">Unable to fetch transaction data for AI analysis.</p>
+        </div>
+      </div>
+    );
+  }
 
   const aiInsights = [
     { title: "Spending Pattern Analysis", description: "Engineering shows 15% increase in equipment purchases vs last quarter.", type: "trend", confidence: 87 },
@@ -102,8 +136,8 @@ const AIAlerts: React.FC = () => {
           </div>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <StatCard title="Transactions Analyzed" value={mockTransactions.length} Icon={CheckCircle} iconColor="text-green-400" />
-          <StatCard title="Anomalies Detected" value={mockAnomalies.length} Icon={AlertTriangle} iconColor="text-red-400" />
+          <StatCard title="Transactions Analyzed" value={transactions.length} Icon={CheckCircle} iconColor="text-green-400" />
+          <StatCard title="Anomalies Detected" value={anomalousTransactions.length} Icon={AlertTriangle} iconColor="text-red-400" />
           <StatCard title="Detection Accuracy" value="94.2%" Icon={TrendingUp} iconColor="text-blue-400" />
         </div>
       </div>
@@ -111,14 +145,33 @@ const AIAlerts: React.FC = () => {
       {/* Active Alerts */}
       <div className="space-y-4">
         <h3 className="text-xl font-semibold text-gray-50">Active Anomaly Alerts</h3>
-        {mockAnomalies.map((alert) => (
-          <AlertCard 
-            key={alert.id} 
-            alert={alert}
-            isExpanded={selectedAlertId === alert.id}
-            onToggle={() => setSelectedAlertId(selectedAlertId === alert.id ? null : alert.id)}
-          />
-        ))}
+        {anomalousTransactions.length === 0 ? (
+          <div className="bg-gray-800 rounded-xl border border-gray-700 p-8 text-center">
+            <Brain className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+            <h4 className="text-lg font-semibold text-gray-300 mb-2">No Anomalies Detected</h4>
+            <p className="text-gray-500">All transactions appear normal. The AI system is monitoring for suspicious activity.</p>
+          </div>
+        ) : (
+          anomalousTransactions.map((tx: any) => {
+            // Convert transaction to alert format
+            const alert = {
+              id: tx.id || tx._id,
+              transaction: tx,
+              reason: tx.anomalyReason || `High anomaly score: ${((tx.anomalyScore || 0) * 100).toFixed(1)}%`,
+              severity: tx.anomalyScore > 0.9 ? 'high' : tx.anomalyScore > 0.7 ? 'medium' : 'low',
+              timestamp: tx.timestamp || tx.createdAt
+            };
+            
+            return (
+              <AlertCard 
+                key={alert.id} 
+                alert={alert}
+                isExpanded={selectedAlertId === alert.id}
+                onToggle={() => setSelectedAlertId(selectedAlertId === alert.id ? null : alert.id)}
+              />
+            );
+          })
+        )}
       </div>
 
       {/* AI Insights & How It Works */}

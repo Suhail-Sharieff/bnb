@@ -8,7 +8,7 @@ export interface Transaction {
   category: string;
   vendor?: string;
   approver?: string;
-  status: 'pending' | 'approved' | 'rejected' | 'completed';
+  status: 'requested' | 'approved' | 'allocated' | 'in-progress' | 'completed' | 'rejected';
   parentTransactionId?: string;
   anomalyScore?: number;
   isAnomalous?: boolean;
@@ -48,7 +48,7 @@ export interface User {
   id: string;
   fullName: string;
   email: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'vendor';
   createdAt: string;
   lastLogin?: string;
   isActive: boolean;

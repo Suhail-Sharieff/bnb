@@ -115,7 +115,7 @@ const ConnectionTest: React.FC<ConnectionTestProps> = ({ onClose }) => {
               <div className="text-red-400 font-medium mb-1">Error Details:</div>
               <div className="text-red-300 text-sm">{error}</div>
               <div className="text-red-300 text-xs mt-2">
-                Make sure your backend server is running on http://localhost:8080
+                Make sure your backend server is running on http://localhost:8000
               </div>
             </div>
           )}

@@ -48,10 +48,10 @@ const Dashboard: React.FC<DashboardProps> = ({ onLogout }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-400">
-              Veritas Ledger - Powered by blockchain technology for radical financial transparency
+              Veritas Ledger - Powered by advanced trust verification technology for radical financial transparency
             </p>
             <div className="flex items-center space-x-4 text-xs text-gray-400">
-              <span>🔒 Blockchain Secured</span>
+              <span>🔒 Trust Verified</span>
               <span>🤖 AI Monitored</span>
               <span>🌐 Publicly Auditable</span>
             </div>

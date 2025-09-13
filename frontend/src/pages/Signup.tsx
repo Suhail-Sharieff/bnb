@@ -7,7 +7,7 @@ interface SignupFormData {
   password: string;
   confirmPassword: string;
   fullName: string;
-  role: 'admin' | 'user';
+  role: 'admin' | 'vendor';
 }
 
 interface SignupErrors {
@@ -29,7 +29,7 @@ const Signup: React.FC<SignupProps> = ({ onSignupSuccess, onSwitchToLogin }) => 
     password: '',
     confirmPassword: '',
     fullName: '',
-    role: 'user'
+    role: 'vendor'
   });
   
   const [errors, setErrors] = useState<SignupErrors>({});
@@ -154,15 +154,15 @@ const Signup: React.FC<SignupProps> = ({ onSignupSuccess, onSwitchToLogin }) => 
 
   const roleOptions = [
     {
-      value: 'user',
-      label: 'User',
-      description: 'Standard user access',
+      value: 'vendor' as const,
+      label: 'Vendor',
+      description: 'Budget request and project management',
       icon: User
     },
     {
-      value: 'admin',
+      value: 'admin' as const,
       label: 'Administrator', 
-      description: 'Full system access',
+      description: 'Full system access and budget approval',
       icon: UserCheck
     }
   ];
@@ -180,7 +180,7 @@ const Signup: React.FC<SignupProps> = ({ onSignupSuccess, onSwitchToLogin }) => 
               Create Account
             </h2>
             <p className="mt-2 text-sm text-gray-400">
-              Join the blockchain budget verification system
+              Join the trust ledger budget verification system
             </p>
           </div>
 
