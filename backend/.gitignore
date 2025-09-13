@@ -1,0 +1,7 @@
+# Add this to .gitignore to protect sensitive information
+.env
+node_modules/
+.DS_Store
+*.log
+dist/
+build/

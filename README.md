@@ -1,106 +1,104 @@
 # Blockchain Budget Verifier
 
-A comprehensive Node.js application that uses blockchain technology to verify the integrity of budget data. This system creates cryptographic hashes of budget information, stores them on Ethereum/Polygon testnets, and provides verification capabilities to detect any tampering.
+A comprehensive full-stack application that uses blockchain technology to verify the integrity of budget data. This system provides a React frontend, Express.js backend API, and smart contract integration for secure budget verification.
 
 ## 🎯 Features
 
+- **Frontend Dashboard**: Modern React TypeScript interface with authentication
+- **Backend API**: Express.js server with MongoDB and blockchain integration
 - **Budget Data Hashing**: Convert budget data to JSON and create keccak256 hashes
 - **Blockchain Storage**: Store hashes securely on Ethereum/Polygon testnets  
 - **Integrity Verification**: Retrieve and compare hashes to detect tampering
 - **Smart Contract Integration**: Deploy and interact with custom Solidity contracts
-- **Multiple Networks**: Support for Sepolia, Mumbai, and other testnets
-- **Environment Configuration**: Secure handling of private keys and RPC URLs
-- **Event Logging**: Smart contract events for transparency and auditing
+- **User Management**: JWT-based authentication with role-based access
+- **File Upload**: Cloudinary integration for document management
+- **Multiple Networks**: Support for Sepolia, Amoy, and other testnets
 
 ## 📁 Project Structure
 
 ```
 blockchain-budget-verifier/
-├── package.json              # Project dependencies and scripts
-├── .env.example              # Environment variables template
-├── BudgetHashStorage.sol     # Solidity smart contract
-├── deploy.js                 # Contract deployment script
-├── index.js                  # Main budget verification script
-└── README.md                 # This file
+├── backend/                  # Backend API server
+│   ├── config/              # Database and service configurations
+│   ├── models/              # MongoDB schemas
+│   ├── api-server.js        # Express.js API server
+│   ├── index.js             # Core blockchain verification logic
+│   ├── deploy.js            # Smart contract deployment
+│   ├── BudgetHashStorage.sol # Solidity smart contract
+│   ├── package.json         # Backend dependencies
+│   ├── .env                 # Environment variables
+│   └── README.md            # Backend documentation
+├── frontend/                # React TypeScript frontend
+│   ├── src/
+│   │   ├── components/      # React components
+│   │   ├── pages/          # Page components
+│   │   ├── lib/            # API client and utilities
+│   │   └── types/          # TypeScript definitions
+│   ├── package.json        # Frontend dependencies
+│   └── README.md           # Frontend documentation
+├── .gitignore              # Git ignore rules
+└── README.md               # This file
 ```
 
 ## 🚀 Quick Start
 
-### 1. Prerequisites
-
+### Prerequisites
 - **Node.js**: Version 16.0.0 or higher
-- **Testnet Account**: Ethereum or Polygon testnet account with some test ETH/MATIC
+- **MongoDB**: Atlas account or local installation
+- **Testnet Account**: Ethereum or Polygon testnet account with test tokens
 - **RPC Provider**: Infura, Alchemy, or other RPC service account
 
-### 2. Installation
-
+### 1. Clone and Setup
 ```bash
-# Clone or download the project files
-# Navigate to the project directory
+# Clone the repository
+git clone <repository-url>
 cd blockchain-budget-verifier
+```
+
+### 2. Backend Setup
+```bash
+# Navigate to backend
+cd backend
+
+# Install dependencies
+npm install
+
+# Copy environment template
+copy .env.example .env
+
+# Edit .env with your actual values
+notepad .env
+```
+
+### 3. Frontend Setup
+```bash
+# Navigate to frontend (from project root)
+cd frontend
 
 # Install dependencies
 npm install
 ```
 
-### 3. Environment Setup
-
+### 4. Deploy Smart Contract
 ```bash
-# Copy the environment template
-copy .env.example .env
-
-# Edit .env file with your actual values
-notepad .env
-```
-
-Fill in your `.env` file:
-
-```env
-# Your wallet private key (without 0x prefix)
-PRIVATE_KEY=your_private_key_here_without_0x_prefix
-
-# RPC URL examples:
-# Sepolia: https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID
-# Mumbai: https://polygon-mumbai.infura.io/v3/YOUR_INFURA_PROJECT_ID
-RPC_URL=https://sepolia.infura.io/v3/YOUR_INFURA_PROJECT_ID
-
-# Leave empty initially - will be filled after deployment
-CONTRACT_ADDRESS=
-
-# Optional settings
-NETWORK_NAME=sepolia
-CHAIN_ID=11155111
-DEBUG=false
-```
-
-### 4. Get Test Funds
-
-**For Sepolia (Ethereum Testnet):**
-- Visit [Sepolia Faucet](https://sepoliafaucet.com/)
-- Enter your wallet address
-- Request test ETH
-
-**For Mumbai (Polygon Testnet):**
-- Visit [Mumbai Faucet](https://faucet.polygon.technology/)
-- Select Mumbai network
-- Request test MATIC
-
-### 5. Deploy Smart Contract
-
-```bash
+# From backend directory
 npm run deploy
 ```
 
-**Important**: Copy the contract address from the deployment output and add it to your `.env` file:
+### 5. Start Development Servers
 
-```env
-CONTRACT_ADDRESS=0x1234567890abcdef1234567890abcdef12345678
+**Backend API Server:**
+```bash
+# From backend directory
+npm run server
+# Server runs on http://localhost:8080
 ```
 
-### 6. Run Budget Verification
-
+**Frontend Development Server:**
 ```bash
-npm start
+# From frontend directory
+npm run dev
+# Frontend runs on http://localhost:5173
 ```
 
 ## 📊 How It Works

@@ -1,41 +1,53 @@
 {
   "name": "blockchain-budget-verifier",
   "version": "1.0.0",
-  "description": "A Node.js script to verify budget data integrity using blockchain technology",
+  "description": "A full-stack blockchain budget verification system with React frontend and Express.js backend",
   "main": "index.js",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "scripts": {
-    "start": "node index.js",
-    "deploy": "node deploy.js",
-    "test": "node index.js",
-    "server": "node api-server.js"
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend && npm run server",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "npm run build:frontend",
+    "build:frontend": "cd frontend && npm run build",
+    "deploy:contract": "cd backend && npm run deploy",
+    "start:backend": "cd backend && npm run server",
+    "start:frontend": "cd frontend && npm run preview",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "clean": "rimraf backend/node_modules frontend/node_modules node_modules",
+    "test": "cd backend && npm test"
   },
   "keywords": [
     "blockchain",
+    "budget-verification",
     "ethereum",
     "polygon",
-    "budget",
-    "verification",
-    "ethers",
-    "smart-contract"
+    "react",
+    "express",
+    "mongodb",
+    "smart-contracts",
+    "full-stack"
   ],
-  "author": "Blockchain Budget Verifier",
+  "author": "Blockchain Budget Verifier Team",
   "license": "MIT",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "crypto": "^1.0.1",
-    "dotenv": "^16.6.1",
-    "ethers": "^6.15.0",
-    "express": "^4.21.2",
-    "jsonwebtoken": "^9.0.2",
-    "bcryptjs": "^2.4.3",
-    "express-rate-limit": "^7.1.5",
-    "helmet": "^7.1.0",
-    "sqlite3": "^5.1.6",
-    "express-validator": "^7.0.1",
-    "node-cache": "^5.1.2",
-    "uuid": "^9.0.1"
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "rimraf": "^5.0.0"
   },
   "engines": {
-    "node": ">=16.0.0"
-  }
+    "node": ">=16.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/blockchain-budget-verifier.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/blockchain-budget-verifier/issues"
+  },
+  "homepage": "https://github.com/your-username/blockchain-budget-verifier#readme"
 }
