@@ -5,6 +5,7 @@ import Overview from './components/Overview';
 import FlowVisualization from './components/FlowVisualization';
 import TransactionList from './components/TransactionList';
 import AIAlerts from './components/AIAlerts';
+import Analytics from './components/Analytics';
 
 function App() {
   const [activeView, setActiveView] = useState('overview');
@@ -19,6 +20,8 @@ function App() {
         return <TransactionList />;
       case 'alerts':
         return <AIAlerts />;
+      case 'analytics':
+        return <Analytics />;
       default:
         return <Overview />;
     }

@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { mockDepartments, mockTransactions } from '../data/mockData';
 import { cn } from '../lib/utils'; // Assumes a utility function for conditional classes
+import Analytics from './Analytics';
 
 // --- Helper Functions ---
 const formatCurrency = (amount: number) => {
@@ -110,7 +111,7 @@ const Overview: React.FC = () => {
           <MetricCard title="Remaining" value={formatCurrency(totalRemaining)} Icon={TrendingUp} iconColorClass="text-green-400" />
           <MetricCard title="Utilization" value={`${utilizationRate.toFixed(1)}%`} Icon={PieChart} iconColorClass="text-indigo-400" />
         </div>
-
+        <Analytics/>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Department Breakdown */}
           <div className="lg:col-span-2 bg-gray-800 p-6 rounded-xl shadow-md border border-gray-700">
