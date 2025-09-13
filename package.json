@@ -49,5 +49,8 @@
   "bugs": {
     "url": "https://github.com/your-username/blockchain-budget-verifier/issues"
   },
-  "homepage": "https://github.com/your-username/blockchain-budget-verifier#readme"
+  "homepage": "https://github.com/your-username/blockchain-budget-verifier#readme",
+  "dependencies": {
+    "react-router-dom": "^7.9.1"
+  }
 }
