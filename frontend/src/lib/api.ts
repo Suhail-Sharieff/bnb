@@ -1,6 +1,12 @@
 // API configuration and helper functions
+<<<<<<< HEAD
 // Backend server runs on port 8000
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+=======
+// Backend server runs from the backend directory
+const API_BASE_URL = 'https://bnb-3izz.onrender.com';
+// const API_BASE_URL = 'http://localhost:3000';
+>>>>>>> d28bf2a57cecb816a3bf31cdc5caf04d990ead6f
 
 interface ApiResponse<T> {
   success: boolean;
