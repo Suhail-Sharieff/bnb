@@ -7,17 +7,19 @@ import BlockchainMonitor from './tabs/BlockchainMonitor';
 import TrustLedger from './tabs/TrustLedger';
 import AdminNotifications from './tabs/AdminNotifications';
 import VendorManagement from './tabs/VendorManagement';
+import BudgetAllocation from './tabs/BudgetAllocation';
+import AdminReports from './tabs/AdminReports';
 
 export default function AdminDashboard() {
   return (
     <DashboardLayout>
       <Routes>
         <Route path="/" element={<AdminHome />} />
-        {/* <Route path="/allocation" element={<BudgetAllocation />} /> */}
+        <Route path="/allocation" element={<BudgetAllocation />} />
         <Route path="/requests" element={<RequestsManagement />} />
         <Route path="/blockchain" element={<BlockchainMonitor />} />
         <Route path="/trust-ledger" element={<TrustLedger />} />
-        {/* <Route path="/reports" element={<AdminReports />} /> */}
+        <Route path="/reports" element={<AdminReports />} />
         <Route path="/notifications" element={<AdminNotifications />} />
         <Route path="/vendors" element={<VendorManagement />} />
       </Routes>

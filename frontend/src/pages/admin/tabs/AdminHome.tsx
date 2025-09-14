@@ -89,7 +89,7 @@ export default function AdminHome() {
             amount: tx.amount,
             status: tx.verificationStatus || tx.status || 'pending',
             date: tx.createdAt || tx.date,
-            hash: tx.transactionHash || tx.hash || '0x...' + Math.random().toString(16).substr(2, 8),
+            hash: tx.transactionHash || tx.hash || 'Not available',
             transactionHash: tx.transactionHash,
             explorerUrl: tx.explorerUrl
           }))

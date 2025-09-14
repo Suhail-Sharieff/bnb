@@ -140,28 +140,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       dispatch({ type: 'AUTH_START' });
       
-      // For development - use mock user if backend is not available
-      if (import.meta.env.DEV && !import.meta.env.VITE_API_URL) {
-        // Mock admin user for development
-        const mockUser: User = {
-          id: 'dev-user-1',
-          fullName: 'Development Admin',
-          email: 'admin@dev.com',
-          role: 'admin',
-          department: 'IT',
-          isActive: true
-        };
-        
-        dispatch({
-          type: 'AUTH_SUCCESS',
-          payload: {
-            user: mockUser,
-            token
-          }
-        });
-        return;
-      }
-      
+      // Always use real backend authentication
       const response = await axios.get(`${API_BASE_URL}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -183,48 +162,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       dispatch({ type: 'AUTH_START' });
       
-      // For development - use mock authentication if backend is not available
-      if (import.meta.env.DEV && !import.meta.env.VITE_API_URL) {
-        // Mock users for development
-        const mockUsers = {
-          'admin@demo.com': {
-            id: 'admin-1',
-            fullName: 'Admin User',
-            email: 'admin@demo.com',
-            role: 'admin' as const,
-            department: 'Administration',
-            isActive: true
-          },
-          'vendor@demo.com': {
-            id: 'vendor-1',
-            fullName: 'Vendor User',
-            email: 'vendor@demo.com',
-            role: 'vendor' as const,
-            companyName: 'Demo Vendor Inc.',
-            walletAddress: '0x742d35Cc7Bf58D43aB6d9e6C2E4DE14b87aF3b47',
-            reputationScore: 85,
-            level: 'Gold',
-            isActive: true
-          }
-        };
-        
-        const user = mockUsers[email as keyof typeof mockUsers];
-        if (user && password === 'demo123') {
-          const token = 'mock-jwt-token-' + Date.now();
-          localStorage.setItem('token', token);
-          
-          dispatch({
-            type: 'AUTH_SUCCESS',
-            payload: { user, token }
-          });
-          
-          toast.success(`Welcome back, ${user.fullName}!`);
-          return;
-        } else {
-          throw new Error('Invalid credentials. Use admin@demo.com or vendor@demo.com with password: demo123');
-        }
-      }
-      
+      // Always use real backend authentication
       const response = await axios.post(`${API_BASE_URL}/auth/login`, {
         email,
         password

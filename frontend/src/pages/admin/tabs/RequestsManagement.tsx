@@ -31,9 +31,10 @@ export default function RequestsManagement() {
       
       if (response.success && response.data) {
         // Transform the data to match our interface
+        // Map 'project' to 'title' to match the interface
         const transformedRequests = response.data.map(req => ({
           ...req,
-          // Add any additional transformations if needed
+          title: req.title || req.project // Use title if available, otherwise use project
         }));
         setRequests(transformedRequests);
       } else {
@@ -42,83 +43,8 @@ export default function RequestsManagement() {
       }
     } catch (error) {
       console.error('Failed to fetch requests:', error);
-      // Use enhanced mock data for development
-      setRequests([
-        {
-          _id: '1',
-          title: 'Website Redesign',
-          amount: 45000,
-          requester: { _id: 'user1', fullName: 'John Smith', email: 'john.smith@company.com', department: 'Marketing' },
-          department: 'Marketing',
-          state: 'pending',
-          priority: 'high',
-          category: 'IT',
-          createdAt: '2024-12-12T10:00:00Z',
-          updatedAt: '2024-12-12T10:00:00Z',
-          description: 'Complete website redesign with modern UI/UX',
-          businessCase: 'Current website is outdated and not mobile-responsive. This redesign will improve user experience and increase conversion rates by an estimated 25%.',
-          attachments: ['wireframes.pdf', 'requirements.docx']
-        } as unknown as BudgetRequest,
-        {
-          _id: '2',
-          title: 'Security Audit',
-          amount: 25000,
-          requester: { _id: 'user2', fullName: 'Sarah Johnson', email: 'sarah.johnson@company.com', department: 'Engineering' },
-          department: 'Engineering',
-          state: 'approved',
-          priority: 'medium',
-          category: 'Security',
-          createdAt: '2024-12-11T14:30:00Z',
-          updatedAt: '2024-12-11T14:30:00Z',
-          description: 'Comprehensive security audit of all systems',
-          businessCase: 'Regular security audits are essential for compliance and protecting sensitive data. Last audit was 12 months ago.',
-          attachments: ['security_checklist.pdf']
-        } as unknown as BudgetRequest,
-        {
-          _id: '3',
-          title: 'Marketing Campaign',
-          amount: 35000,
-          requester: { _id: 'user3', fullName: 'Mike Davis', email: 'mike.davis@company.com', department: 'Marketing' },
-          department: 'Marketing',
-          state: 'allocated',
-          priority: 'medium',
-          category: 'Marketing',
-          createdAt: '2024-12-10T09:15:00Z',
-          updatedAt: '2024-12-10T09:15:00Z',
-          description: 'Q1 digital marketing campaign launch',
-          businessCase: 'Launch new product line with targeted digital marketing campaign to reach 100K potential customers.',
-          attachments: ['campaign_strategy.pdf', 'target_audience.xlsx']
-        } as unknown as BudgetRequest,
-        {
-          _id: '4',
-          title: 'Data Analytics Platform',
-          amount: 80000,
-          requester: { _id: 'user4', fullName: 'Lisa Chen', email: 'lisa.chen@company.com', department: 'Data' },
-          department: 'Data',
-          state: 'pending',
-          priority: 'high',
-          category: 'IT',
-          createdAt: '2024-12-09T16:45:00Z',
-          updatedAt: '2024-12-09T16:45:00Z',
-          description: 'Implementation of advanced data analytics platform',
-          businessCase: 'Current analytics tools are insufficient for growing data needs. New platform will enable real-time insights and predictive analytics.',
-          attachments: ['platform_comparison.xlsx', 'roi_analysis.pdf']
-        } as unknown as BudgetRequest,
-        {
-          _id: '5',
-          title: 'Office Equipment Upgrade',
-          amount: 15000,
-          requester: { _id: 'user5', fullName: 'Tom Wilson', email: 'tom.wilson@company.com', department: 'Operations' },
-          department: 'Operations',
-          state: 'rejected',
-          priority: 'low',
-          category: 'Operations',
-          createdAt: '2024-12-08T11:20:00Z',
-          updatedAt: '2024-12-08T11:20:00Z',
-          description: 'Upgrade office computers and peripherals',
-          businessCase: 'Current equipment is 4 years old and affecting productivity. Upgrade will improve efficiency and reduce maintenance costs.'
-        } as unknown as BudgetRequest
-      ]);
+      // Show error message instead of mock data
+      setRequests([]);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -242,7 +168,7 @@ This will send notification to ${request.requester?.email || 'requester'}`);
     let filtered = requests.filter(request => {
       const matchesFilter = filter === 'all' || request.state === filter;
       const matchesSearch = 
-        request.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (request.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         (request.requester?.fullName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         request.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
         request.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -268,8 +194,8 @@ This will send notification to ${request.requester?.email || 'requester'}`);
         aValue = new Date(aValue).getTime();
         bValue = new Date(bValue).getTime();
       } else {
-        aValue = String(aValue).toLowerCase();
-        bValue = String(bValue).toLowerCase();
+        aValue = String(aValue || '').toLowerCase();
+        bValue = String(bValue || '').toLowerCase();
       }
       
       if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
@@ -481,83 +407,102 @@ This will send notification to ${request.requester?.email || 'requester'}`);
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredAndSortedRequests.map((request: BudgetRequest) => (
-                <tr key={request._id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div>
-                      <div className="text-sm font-medium text-gray-900">{request.title}</div>
-                      <div className="text-sm text-gray-500 truncate max-w-xs">{request.description}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                    {formatCurrency(request.amount)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {request.requester && typeof request.requester === 'object' ? request.requester.fullName : request.requester}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {request.department}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 text-xs rounded-full capitalize ${getPriorityColor(request.priority)}`}>
-                      {request.priority}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      {getStatusIcon(request.state)}
-                      <span className={`ml-2 px-2 py-1 text-xs rounded-full capitalize ${getStatusColor(request.state)}`}>
-                        {request.state}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {formatDate(request.createdAt)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                    <div className="flex flex-col space-y-1">
-                      <div className="flex space-x-1">
-                        <button
-                          onClick={() => handleViewDetails(request)}
-                          className="text-blue-600 hover:text-blue-800 font-medium flex items-center text-xs"
-                        >
-                          <Eye className="w-3 h-3 mr-1" />
-                          View
-                        </button>
+              {filteredAndSortedRequests.length > 0 ? (
+                filteredAndSortedRequests.map((request: BudgetRequest) => (
+                  <tr key={request._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div>
+                        <div className="text-sm font-medium text-gray-900">{request.title}</div>
+                        <div className="text-sm text-gray-500 truncate max-w-xs">{request.description}</div>
                       </div>
-                      {request.state === 'pending' && (
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                      {formatCurrency(request.amount)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {request.requester && typeof request.requester === 'object' ? request.requester.fullName : request.requester}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {request.department}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs rounded-full capitalize ${getPriorityColor(request.priority)}`}>
+                        {request.priority}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        {getStatusIcon(request.state)}
+                        <span className={`ml-2 px-2 py-1 text-xs rounded-full capitalize ${getStatusColor(request.state)}`}>
+                          {request.state}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {formatDate(request.createdAt)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                      <div className="flex flex-col space-y-1">
                         <div className="flex space-x-1">
                           <button
-                            onClick={() => handleApprove(request._id)}
-                            disabled={processing === request._id}
-                            className="text-green-600 hover:text-green-800 font-medium disabled:opacity-50 flex items-center text-xs"
+                            onClick={() => handleViewDetails(request)}
+                            className="text-blue-600 hover:text-blue-800 font-medium flex items-center text-xs"
                           >
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            {processing === request._id ? 'Processing...' : 'Approve'}
-                          </button>
-                          <button
-                            onClick={() => handleReject(request._id)}
-                            disabled={processing === request._id}
-                            className="text-red-600 hover:text-red-800 font-medium disabled:opacity-50 flex items-center text-xs"
-                          >
-                            <XCircle className="w-3 h-3 mr-1" />
-                            Reject
+                            <Eye className="w-3 h-3 mr-1" />
+                            View
                           </button>
                         </div>
-                      )}
-                      {request.state === 'approved' && (
-                        <button
-                          onClick={() => handleAllocate(request._id)}
-                          className="text-blue-600 hover:text-blue-800 font-medium flex items-center text-xs"
-                        >
-                          <DollarSign className="w-3 h-3 mr-1" />
-                          Allocate
-                        </button>
-                      )}
+                        {request.state === 'pending' && (
+                          <div className="flex space-x-1">
+                            <button
+                              onClick={() => handleApprove(request._id)}
+                              disabled={processing === request._id}
+                              className="text-green-600 hover:text-green-800 font-medium disabled:opacity-50 flex items-center text-xs"
+                            >
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              {processing === request._id ? 'Processing...' : 'Approve'}
+                            </button>
+                            <button
+                              onClick={() => handleReject(request._id)}
+                              disabled={processing === request._id}
+                              className="text-red-600 hover:text-red-800 font-medium disabled:opacity-50 flex items-center text-xs"
+                            >
+                              <XCircle className="w-3 h-3 mr-1" />
+                              Reject
+                            </button>
+                        </div>
+                        )}
+                        {request.state === 'approved' && (
+                          <button
+                            onClick={() => handleAllocate(request._id)}
+                            className="text-blue-600 hover:text-blue-800 font-medium flex items-center text-xs"
+                          >
+                            <DollarSign className="w-3 h-3 mr-1" />
+                            Allocate
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={8} className="px-6 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <AlertTriangle className="h-12 w-12 text-gray-400 mb-4" />
+                      <h3 className="text-lg font-medium text-gray-900 mb-1">No requests found</h3>
+                      <p className="text-gray-500 mb-4">There are no budget requests matching your current filters.</p>
+                      <button
+                        onClick={() => fetchRequests()}
+                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        <RefreshCw className="h-4 w-4 mr-2" />
+                        Refresh Data
+                      </button>
                     </div>
                   </td>
                 </tr>
-              ))}
+              )}
             </tbody>
           </table>
         </div>

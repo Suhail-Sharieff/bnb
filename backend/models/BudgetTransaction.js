@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { generateConsistentHash, normalizeHash, isValidHash } = require('../utils/hashUtils');
 
 const budgetTransactionSchema = new mongoose.Schema({
   // Blockchain specific fields
@@ -6,7 +7,13 @@ const budgetTransactionSchema = new mongoose.Schema({
     type: String,
     required: true,
     unique: true,
-    trim: true
+    trim: true,
+    validate: {
+      validator: function(v) {
+        return isValidHash(v);
+      },
+      message: props => `${props.value} is not a valid transaction hash format!`
+    }
   },
   blockNumber: {
     type: Number,
@@ -100,7 +107,13 @@ const budgetTransactionSchema = new mongoose.Schema({
   dataHash: {
     type: String,
     required: true,
-    trim: true
+    trim: true,
+    validate: {
+      validator: function(v) {
+        return isValidHash(v);
+      },
+      message: props => `${props.value} is not a valid data hash format!`
+    }
   },
   hashAlgorithm: {
     type: String,
@@ -254,6 +267,55 @@ budgetTransactionSchema.methods.verifyIntegrity = function(currentHash) {
   return this.save();
 };
 
+// Enhanced pre-save middleware to ensure consistent hashing with validation
+budgetTransactionSchema.pre('save', async function(next) {
+  // Ensure transaction hash is in proper format
+  if (this.transactionHash) {
+    // Normalize the transaction hash
+    this.transactionHash = normalizeHash(this.transactionHash);
+    
+    // Validate the transaction hash format
+    if (!isValidHash(this.transactionHash)) {
+      return next(new Error('Invalid transaction hash format'));
+    }
+  }
+  
+  // Generate consistent hash if not already set
+  if (!this.dataHash && this.budgetRequestId) {
+    // Prepare the data for hashing - this should match what's stored on-chain
+    const transactionDataForHashing = {
+      requestId: this.budgetRequestId,
+      amount: this.amount,
+      timestamp: this.submissionDate || this.createdAt,
+      department: this.department,
+      project: this.project,
+      vendorAddress: this.vendorAddress || '0x0000000000000000000000000000000000000000',
+      allocatedBy: this.createdBy,
+      budgetRequestId: this.budgetRequestId,
+      category: this.category,
+      vendorName: this.vendor
+    };
+
+    // Generate consistent hash using the same algorithm as the contract
+    this.dataHash = generateConsistentHash(transactionDataForHashing);
+    
+    // Validate the generated hash
+    if (!isValidHash(this.dataHash)) {
+      return next(new Error('Generated data hash is invalid'));
+    }
+  } else if (this.dataHash) {
+    // Normalize existing data hash
+    this.dataHash = normalizeHash(this.dataHash);
+    
+    // Validate the data hash format
+    if (!isValidHash(this.dataHash)) {
+      return next(new Error('Invalid data hash format'));
+    }
+  }
+  
+  next();
+});
+
 // Pre-save middleware for anomaly detection
 budgetTransactionSchema.pre('save', function(next) {
   // Simple anomaly detection logic
@@ -267,5 +329,34 @@ budgetTransactionSchema.pre('save', function(next) {
   
   next();
 });
+
+// Static method to verify hash consistency across layers
+budgetTransactionSchema.statics.verifyHashConsistency = async function(transactionId, frontendData, onChainData) {
+  try {
+    const transaction = await this.findById(transactionId);
+    if (!transaction) {
+      throw new Error('Transaction not found');
+    }
+    
+    // Generate frontend hash using the same algorithm
+    const frontendHash = generateConsistentHash(frontendData);
+    
+    // Get backend hash from transaction
+    const backendHash = transaction.dataHash;
+    
+    // Return consistency results
+    return {
+      frontendHash,
+      backendHash,
+      onChainHash: onChainData,
+      frontendBackendMatch: frontendHash === backendHash,
+      backendOnChainMatch: backendHash === onChainData,
+      allMatch: frontendHash === backendHash && backendHash === onChainData,
+      timestamp: new Date().toISOString()
+    };
+  } catch (error) {
+    throw new Error(`Hash consistency verification failed: ${error.message}`);
+  }
+};
 
 module.exports = mongoose.model('BudgetTransaction', budgetTransactionSchema);

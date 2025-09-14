@@ -1,6 +1,7 @@
 const { ethers } = require('ethers');
 const fs = require('fs');
 const path = require('path');
+const { generateConsistentHash, normalizeHash, isValidHash } = require('../utils/hashUtils');
 require('dotenv').config();
 
 class BlockchainService {
@@ -138,12 +139,25 @@ class BlockchainService {
     try {
       console.log(`📝 Creating budget request on blockchain...`);
       
+      // Prepare data for consistent hashing - this should match what's used in frontend and backend
+      const requestDataForHashing = {
+        department: department,
+        project: project,
+        amount: amount.toString(),
+        description: description,
+        documentsHash: documentsHash,
+        timestamp: new Date().toISOString()
+      };
+      
+      // Generate consistent hash using the same algorithm as frontend/backend
+      const dataHash = generateConsistentHash(requestDataForHashing);
+      
       const tx = await this.contract.createBudgetRequest(
         department,
         project,
         ethers.parseEther(amount.toString()),
         description,
-        documentsHash
+        dataHash // Use our consistent hash instead of documentsHash
       );
       
       console.log(`⏳ Transaction submitted: ${tx.hash}`);
@@ -154,7 +168,8 @@ class BlockchainService {
         transactionHash: tx.hash,
         blockNumber: receipt.blockNumber,
         gasUsed: receipt.gasUsed.toString(),
-        status: receipt.status
+        status: receipt.status,
+        dataHash: dataHash // Return the computed hash for consistency checking
       };
     } catch (error) {
       console.error('❌ Failed to create budget request:', error.message);
@@ -214,6 +229,23 @@ class BlockchainService {
     try {
       const result = await this.contract.getBudgetRequest(requestId);
       
+      // Prepare data for consistent hashing - this should match what's used in frontend and backend
+      const requestDataForHashing = {
+        id: result[0].toString(),
+        requester: result[1],
+        department: result[2],
+        project: result[3],
+        amount: ethers.formatEther(result[4]),
+        description: result[5],
+        state: result[6],
+        timestamp: new Date(Number(result[7]) * 1000).toISOString(),
+        approvedBy: result[8],
+        approvedAt: result[9] > 0 ? new Date(Number(result[9]) * 1000).toISOString() : null
+      };
+      
+      // Generate consistent hash using the same algorithm as frontend/backend
+      const dataHash = generateConsistentHash(requestDataForHashing);
+
       return {
         id: result[0].toString(),
         requester: result[1],
@@ -224,7 +256,8 @@ class BlockchainService {
         state: result[6],
         timestamp: new Date(Number(result[7]) * 1000),
         approvedBy: result[8],
-        approvedAt: result[9] > 0 ? new Date(Number(result[9]) * 1000) : null
+        approvedAt: result[9] > 0 ? new Date(Number(result[9]) * 1000) : null,
+        dataHash: dataHash // Add the computed hash for consistency checking
       };
     } catch (error) {
       console.error('❌ Failed to get budget request:', error.message);
@@ -290,17 +323,43 @@ class BlockchainService {
     }
   }
 
+  // Enhanced method to generate proof of authenticity with consistent hashing
   generateProofOfAuthenticity(data) {
-    const dataString = JSON.stringify(data);
-    const hash = ethers.keccak256(ethers.toUtf8Bytes(dataString));
+    // Use our consistent hashing function
+    const hash = generateConsistentHash(data);
     
     return {
       dataHash: hash,
+      normalizedHash: normalizeHash(hash),
+      isValid: isValidHash(hash),
       timestamp: new Date().toISOString(),
       network: this.provider?.network?.name || 'unknown',
       contractAddress: this.contract?.target || 'not deployed',
       verificationInstructions: 'Use the blockchain explorer to verify this hash exists on the blockchain'
     };
+  }
+
+  // Enhanced method to verify hash consistency between layers
+  async verifyHashConsistency(frontendData, backendData, onChainData) {
+    try {
+      // Generate hashes using the same algorithm for all layers
+      const frontendHash = generateConsistentHash(frontendData);
+      const backendHash = generateConsistentHash(backendData);
+      // onChainData should already be a hash from the blockchain
+      
+      return {
+        frontendHash,
+        backendHash,
+        onChainHash: onChainData,
+        frontendBackendMatch: frontendHash === backendHash,
+        backendOnChainMatch: backendHash === onChainData,
+        allMatch: frontendHash === backendHash && backendHash === onChainData,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error) {
+      console.error('❌ Failed to verify hash consistency:', error.message);
+      throw error;
+    }
   }
 
   getExplorerUrl(transactionHash, network) {

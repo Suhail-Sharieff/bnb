@@ -49,18 +49,34 @@ interface WalletData {
 }
 
 interface DashboardData {
-  totalBudget: number;
-  totalSpent: number;
-  totalRemaining: number;
-  activeVendors: number;
-  pendingRequests: number;
-  completedProjects: number;
-  recentActivity: Array<{
+  overview: {
+    totalBudget: number;
+    allocatedBudget: number;
+    releasedBudget: number;
+    pendingRequests: number;
+    totalVendors: number;
+    activeAllocations: number;
+  };
+  requestStats: Array<{
+    _id: string;
+    count: number;
+    totalAmount: number;
+  }>;
+  departmentSpending: Array<{
+    _id: string;
+    totalSpent: number;
+    requestCount: number;
+  }>;
+  recentTransactions: Array<{
     id: string;
-    type: string;
-    description: string;
-    timestamp: string;
-    amount?: number;
+    project: string;
+    vendor: string;
+    amount: number;
+    status: string;
+    date: string;
+    hash: string;
+    transactionHash?: string;
+    explorerUrl?: string;
   }>;
 }
 
@@ -301,44 +317,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error: any) {
       dispatch({ type: 'SET_ERROR', payload: { key: 'transactions', value: error.message } });
-      // Use mock data in development
-      const mockTransactions: Transaction[] = [
-        {
-          id: '1',
-          transactionHash: '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
-          blockNumber: 19234567,
-          amount: 50000,
-          project: 'Website Redesign',
-          department: 'Marketing',
-          status: 'confirmed',
-          type: 'allocation',
-          timestamp: new Date(Date.now() - 3600000).toISOString(),
-          from: '0xabcd...ef12',
-          to: '0x1234...5678',
-          gasUsed: 21000,
-          gasPrice: '20.5',
-          approvalStatus: 'approved',
-          verificationStatus: 'verified',
-        },
-        {
-          id: '2',
-          transactionHash: '0xfedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321',
-          blockNumber: 19234566,
-          amount: 25000,
-          project: 'Security Audit',
-          department: 'Engineering',
-          status: 'confirmed',
-          type: 'release',
-          timestamp: new Date(Date.now() - 7200000).toISOString(),
-          from: '0x1234...5678',
-          to: '0xabcd...ef12',
-          gasUsed: 35000,
-          gasPrice: '18.2',
-          approvalStatus: 'completed',
-          verificationStatus: 'verified',
-        },
-      ];
-      dispatch({ type: 'SET_TRANSACTIONS', payload: mockTransactions });
+      // Use empty array instead of mock data to avoid fake hashes
+      dispatch({ type: 'SET_TRANSACTIONS', payload: [] });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'transactions', value: false } });
     }
@@ -383,28 +363,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error: any) {
       dispatch({ type: 'SET_ERROR', payload: { key: 'notifications', value: error.message } });
-      // Use mock data in development
-      const mockNotifications: Notification[] = [
-        {
-          id: '1',
-          type: 'success',
-          title: 'Transaction Confirmed',
-          message: 'Your allocation of $50,000 for Website Redesign has been verified and recorded in the trust ledger.',
-          timestamp: new Date(Date.now() - 1800000).toISOString(),
-          read: false,
-          priority: 'high',
-        },
-        {
-          id: '2',
-          type: 'info',
-          title: 'New Budget Request',
-          message: 'A new budget request for $25,000 has been submitted for your review.',
-          timestamp: new Date(Date.now() - 3600000).toISOString(),
-          read: false,
-          priority: 'medium',
-        },
-      ];
-      dispatch({ type: 'SET_NOTIFICATIONS', payload: mockNotifications });
+      // Use empty array instead of mock data
+      dispatch({ type: 'SET_NOTIFICATIONS', payload: [] });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'notifications', value: false } });
     }
@@ -454,19 +414,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error: any) {
       dispatch({ type: 'SET_ERROR', payload: { key: 'wallet', value: error.message } });
-      // Use mock data in development
-      const mockWallet: WalletData = {
-        address: user?.walletAddress || '0x742d35Cc7Bf58D43aB6d9e6C2E4DE14b87aF3b47',
+      // Use null instead of mock data
+      dispatch({ type: 'SET_WALLET', payload: { 
+        address: '',
         balance: {
-          allocated: 150000,
-          available: 75000,
-          withdrawn: 25000,
-          pending: 50000,
+          allocated: 0,
+          available: 0,
+          withdrawn: 0,
+          pending: 0
         },
-        transactions: state.transactions,
-        lastUpdated: new Date().toISOString(),
-      };
-      dispatch({ type: 'SET_WALLET', payload: mockWallet });
+        transactions: [],
+        lastUpdated: new Date().toISOString()
+      } });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'wallet', value: false } });
     }
@@ -502,32 +461,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (error: any) {
       dispatch({ type: 'SET_ERROR', payload: { key: 'dashboard', value: error.message } });
-      // Use mock data in development
-      const mockDashboard: DashboardData = {
-        totalBudget: 2500000,
-        totalSpent: 1850000,
-        totalRemaining: 650000,
-        activeVendors: 28,
-        pendingRequests: 12,
-        completedProjects: 145,
-        recentActivity: [
-          {
-            id: '1',
-            type: 'allocation',
-            description: 'Budget allocated to Website Redesign project',
-            timestamp: new Date(Date.now() - 1800000).toISOString(),
-            amount: 50000,
-          },
-          {
-            id: '2',
-            type: 'approval',
-            description: 'Security Audit request approved',
-            timestamp: new Date(Date.now() - 3600000).toISOString(),
-            amount: 25000,
-          },
-        ],
-      };
-      dispatch({ type: 'SET_DASHBOARD', payload: mockDashboard });
+      // Use null instead of mock data
+      dispatch({ type: 'SET_DASHBOARD', payload: {
+        overview: {
+          totalBudget: 0,
+          allocatedBudget: 0,
+          releasedBudget: 0,
+          pendingRequests: 0,
+          totalVendors: 0,
+          activeAllocations: 0
+        },
+        requestStats: [],
+        departmentSpending: [],
+        recentTransactions: []
+      } });
     } finally {
       dispatch({ type: 'SET_LOADING', payload: { key: 'dashboard', value: false } });
     }

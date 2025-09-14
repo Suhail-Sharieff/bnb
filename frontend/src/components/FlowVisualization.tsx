@@ -1,7 +1,8 @@
 import React, { useState, useLayoutEffect, useRef } from 'react';
 import { useDepartments } from '../hooks/useApi';
-import { cn } from '../lib/utils'; // Assumes a utility function for conditional classes
+import { cn } from '../lib/utils';
 import { CheckCircle, MousePointerClick, Filter, Download } from 'lucide-react';
+import BudgetFlowVisualization from './BudgetFlowVisualization';
 
 // --- Helper Functions & Data ---
 const formatCurrency = (amount: number): string => {
@@ -12,8 +13,6 @@ const formatCurrency = (amount: number): string => {
     maximumFractionDigits: 0,
   }).format(amount);
 };
-
-// Remove the old totalBudget calculation
 
 // Map hex colors to Tailwind classes for better maintainability
 const colorMap: { [key: string]: { bg: string; border: string; text: string } } = {
@@ -175,47 +174,83 @@ const FlowVisualization: React.FC = () => {
   const { data: departmentsData, loading } = useDepartments();
   const departments = (departmentsData as any) || [];
   const totalBudget = departments.reduce((sum: number, dept: any) => sum + (dept.allocated || 0), 0);
+  const [activeTab, setActiveTab] = useState<'departments' | 'budgetFlow'>('departments');
 
   return (
     <div className="space-y-8 animate-fadeIn">
-      {/* Sankey-style Flow Diagram */}
-      <div className="bg-gray-800 p-6 rounded-xl shadow-md border border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-50 mb-4 text-center">Budget Flow Visualization</h3>
-        <SankeyDiagram />
-        <p className="text-sm text-gray-500 mt-4 text-center">
-          Flow thickness is proportional to budget allocation. Hover over a department to highlight its path.
-        </p>
+      {/* Tab Navigation */}
+      <div className="flex border-b border-gray-700">
+        <button
+          className={cn(
+            "px-4 py-2 font-medium text-sm",
+            activeTab === 'departments' 
+              ? "text-blue-500 border-b-2 border-blue-500" 
+              : "text-gray-500 hover:text-gray-300"
+          )}
+          onClick={() => setActiveTab('departments')}
+        >
+          Department Flow
+        </button>
+        <button
+          className={cn(
+            "px-4 py-2 font-medium text-sm",
+            activeTab === 'budgetFlow' 
+              ? "text-blue-500 border-b-2 border-blue-500" 
+              : "text-gray-500 hover:text-gray-300"
+          )}
+          onClick={() => setActiveTab('budgetFlow')}
+        >
+          Complete Budget Flow
+        </button>
       </div>
 
-      {/* Budget Allocation Treemap */}
-      <div className="bg-gray-800 p-6 rounded-xl shadow-md border border-gray-700">
-        <h3 className="text-lg font-semibold text-gray-50 mb-4 text-center">Budget Allocation Overview</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 h-48">
-          {departments.map((dept: any, index: number) => {
-            const percentage = totalBudget > 0 ? (dept.allocated / totalBudget) * 100 : 0;
-            const colors = colorMap[dept.color] || colorMap['#3B82F6'];
-            return (
-              <div
-                key={dept.id || index}
-                className={cn("relative rounded-lg p-4 transition-all hover:scale-105 cursor-pointer", colors.bg)}
-                style={{ 
-                  height: `${Math.max(percentage * 2, 20)}%`,
-                  minHeight: '60px'
-                }}
-              >
-                <p className="font-bold text-white text-sm">{dept.name}</p>
-                <p className="text-white/90 text-xs">{formatCurrency(dept.allocated)}</p>
-                <p className="text-white/70 text-xs font-mono">
-                  {percentage.toFixed(1)}%
-                </p>
-              </div>
-            );
-          })}
+      {/* Tab Content */}
+      {activeTab === 'departments' ? (
+        <>
+          {/* Sankey-style Flow Diagram */}
+          <div className="bg-gray-800 p-6 rounded-xl shadow-md border border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-50 mb-4 text-center">Budget Flow Visualization</h3>
+            <SankeyDiagram />
+            <p className="text-sm text-gray-500 mt-4 text-center">
+              Flow thickness is proportional to budget allocation. Hover over a department to highlight its path.
+            </p>
+          </div>
+
+          {/* Budget Allocation Treemap */}
+          <div className="bg-gray-800 p-6 rounded-xl shadow-md border border-gray-700">
+            <h3 className="text-lg font-semibold text-gray-50 mb-4 text-center">Budget Allocation Overview</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 h-48">
+              {departments.map((dept: any, index: number) => {
+                const percentage = totalBudget > 0 ? (dept.allocated / totalBudget) * 100 : 0;
+                const colors = colorMap[dept.color] || colorMap['#3B82F6'];
+                return (
+                  <div
+                    key={dept.id || index}
+                    className={cn("relative rounded-lg p-4 transition-all hover:scale-105 cursor-pointer", colors.bg)}
+                    style={{ 
+                      height: `${Math.max(percentage * 2, 20)}%`,
+                      minHeight: '60px'
+                    }}
+                  >
+                    <p className="font-bold text-white text-sm">{dept.name}</p>
+                    <p className="text-white/90 text-xs">{formatCurrency(dept.allocated)}</p>
+                    <p className="text-white/70 text-xs font-mono">
+                      {percentage.toFixed(1)}%
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+            <p className="text-sm text-gray-500 mt-6 text-center">
+              Each rectangle's size represents its budget allocation relative to the total.
+            </p>
+          </div>
+        </>
+      ) : (
+        <div className="bg-gray-800 p-6 rounded-xl shadow-md border border-gray-700">
+          <BudgetFlowVisualization budgetFlowId="BUDGET-EXAMPLE" />
         </div>
-        <p className="text-sm text-gray-500 mt-6 text-center">
-          Each rectangle's size represents its budget allocation relative to the total.
-        </p>
-      </div>
+      )}
 
       {/* Interactive Features Demo */}
       <div className="bg-gradient-to-r from-gray-800 to-emerald-900/30 p-6 rounded-xl border border-emerald-800">

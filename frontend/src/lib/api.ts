@@ -1,11 +1,12 @@
 // API configuration and helper functions
-// Backend server runs on port 8002
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8002/api';
+// Backend server runs on port 8000
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 interface ApiResponse<T> {
   success: boolean;
   message: string;
   data?: T;
+  transaction?: Transaction;
   error?: string;
   pagination?: {
     page: number;
@@ -43,6 +44,7 @@ interface AuthResponse {
 interface BudgetRequest {
   _id: string;
   title: string;
+  project: string;
   description: string;
   amount: number;
   department: string;
@@ -91,6 +93,16 @@ interface Transaction {
     fullName: string;
     email: string;
   };
+  // Additional fields from BudgetTransaction model
+  submittedBy?: string;
+  submissionDate?: string;
+  budgetRequestId?: string;
+  vendorAddress?: string;
+  dataHash?: string;
+  category?: string;
+  vendor?: string;
+  updatedAt?: string;
+  hashAlgorithm?: string;
 }
 
 interface Vendor {
@@ -124,7 +136,8 @@ class ApiClient {
     this.baseUrl = baseUrl;
   }
 
-  private async request<T>(
+  // Make request method public so it can be used by other methods
+  public async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
@@ -138,7 +151,7 @@ class ApiClient {
     };
 
     // Add auth token if available
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('token');
     if (token) {
       config.headers = {
         ...config.headers,
@@ -227,8 +240,8 @@ class ApiClient {
     });
   }
 
-  async allocateFunds(id: string, vendorId: string, allocatedAmount: number): Promise<ApiResponse<BudgetRequest>> {
-    return this.request<BudgetRequest>(`/admin/budget-requests/${id}/allocate`, {
+  async allocateFunds(id: string, vendorId: string, allocatedAmount: number): Promise<ApiResponse<BudgetRequest & { transaction?: Transaction }>> {
+    return this.request<BudgetRequest & { transaction?: Transaction }>(`/admin/budget-requests/${id}/allocate`, {
       method: 'PUT',
       body: JSON.stringify({ vendorId, allocatedAmount }),
     });
@@ -242,7 +255,7 @@ class ApiClient {
     status?: string;
   }): Promise<ApiResponse<Transaction[]>> {
     const query = new URLSearchParams(params as any).toString();
-    return this.request<Transaction[]>(`/admin/transactions?${query}`);
+    return this.request<Transaction[]>(`/blockchain/transactions?${query}`);
   }
 
   // Vendors methods
@@ -327,7 +340,7 @@ class ApiClient {
 
   // Blockchain verification methods
   async getTransactionDetails(id: string): Promise<ApiResponse<Transaction>> {
-    return this.request<Transaction>(`/admin/transactions/${id}`);
+    return this.request<Transaction>(`/blockchain/transaction/${id}`);
   }
 
   async verifyTransactionIntegrity(transactionId: string, dataHash: string): Promise<ApiResponse<any>> {
@@ -335,6 +348,26 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ dataHash }),
     });
+  }
+
+  // Method to fetch blockchain proof data
+  async getTransactionProof(txHash: string): Promise<ApiResponse<any>> {
+    try {
+      return await this.request<any>(`/blockchain/proof/${txHash}`);
+    } catch (error) {
+      // Fallback to using transaction details if proof endpoint doesn't exist
+      console.warn('Proof endpoint not found, falling back to transaction details');
+      return {
+        success: false,
+        message: 'Proof endpoint not available',
+        error: 'Endpoint not found'
+      } as ApiResponse<any>;
+    }
+  }
+
+  // Method to debug hash consistency
+  async debugTransactionHash(id: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/blockchain/debug/${id}`);
   }
 
   getBlockchainExplorerUrl(transactionHash: string, network: string = 'sepolia'): string {

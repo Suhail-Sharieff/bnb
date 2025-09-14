@@ -226,8 +226,14 @@ async function seedTransactions(requests, users) {
   const completedRequests = requests.filter(r => r.state === 'completed');
   
   for (const request of completedRequests) {
+    // Generate proper transaction hash (66 characters: 0x + 64 hex chars)
+    const transactionHash = '0x' + require('crypto').randomBytes(32).toString('hex');
+    
+    // Generate proper data hash (66 characters: 0x + 64 hex chars)
+    const dataHash = '0x' + require('crypto').randomBytes(32).toString('hex');
+    
     const transaction = await BudgetTransaction.create({
-      transactionHash: `0x${Math.random().toString(16).substr(2, 64)}`,
+      transactionHash: transactionHash,
       blockNumber: Math.floor(Math.random() * 1000000) + 18000000,
       contractAddress: '0x1234567890123456789012345678901234567890',
       gasUsed: (Math.random() * 100000 + 50000).toFixed(0),
@@ -238,7 +244,7 @@ async function seedTransactions(requests, users) {
       submittedBy: users.find(u => u.role === 'admin').fullName,
       submissionDate: request.completedAt,
       approvalStatus: 'completed',
-      dataHash: `0x${Math.random().toString(16).substr(2, 64)}`,
+      dataHash: dataHash,
       createdBy: request.requester,
       approvedBy: request.approvedBy,
       category: request.category,

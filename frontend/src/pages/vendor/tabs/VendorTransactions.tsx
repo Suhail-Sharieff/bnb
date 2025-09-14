@@ -41,12 +41,12 @@ export default function VendorTransactions() {
         const transformedTransactions = response.data.map((tx: any) => ({
           _id: tx._id,
           amount: tx.amount,
-          description: tx.description,
+          description: tx.description || `Transaction for ${tx.project || 'N/A'}`,
           project: tx.project,
           department: tx.department,
-          status: tx.verificationStatus,
+          status: tx.verificationStatus || tx.status || 'pending',
           transactionHash: tx.transactionHash,
-          explorerUrl: tx.explorerUrl,
+          explorerUrl: tx.explorerUrl || (tx.transactionHash ? `https://sepolia.etherscan.io/tx/${tx.transactionHash}` : undefined),
           createdAt: tx.createdAt,
           type: tx.type || (tx.amount > 0 ? 'credit' : 'debit')
         }));
@@ -82,6 +82,23 @@ export default function VendorTransactions() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading transactions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
+          <div className="text-red-500 font-medium">Error Loading Transactions</div>
+          <p className="text-red-700 mt-2">{error}</p>
+          <button
+            onClick={fetchTransactions}
+            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -168,6 +185,12 @@ export default function VendorTransactions() {
               <CreditCard className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No transactions found</h3>
               <p className="mt-1 text-sm text-gray-500">You don't have any blockchain-verified transactions yet.</p>
+              <button
+                onClick={fetchTransactions}
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                Refresh
+              </button>
             </div>
           )}
         </div>

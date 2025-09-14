@@ -52,6 +52,7 @@
   "homepage": "https://github.com/your-username/blockchain-budget-verifier#readme",
   "dependencies": {
     "csv-writer": "^1.6.0",
+    "fast-json-stable-stringify": "^2.1.0",
     "pdfkit": "^0.17.2"
   }
 }

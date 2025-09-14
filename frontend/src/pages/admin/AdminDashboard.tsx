@@ -1,36 +1,41 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../hooks/useAuth'; 
 import { 
   DollarSign, Users, FileText, TrendingUp, CheckCircle, Clock, XCircle,
   AlertTriangle, Settings, Download, RefreshCw, Eye
 } from 'lucide-react';
 import { useApp } from '../../contexts/AppContext';
 import TransactionDetailModal from '../../components/TransactionDetailModal';
+import { apiClient } from '../../lib/api';
 
 interface DashboardData {
   overview: {
-    totalBudget: number;
-    allocatedBudget: number;
-    releasedBudget: number;
-    pendingRequests: number;
-    totalVendors: number;
-    activeAllocations: number;
+    totalRequests: number;
+    totalTransactions: number;
+    totalUsers: number;
+    activeVendors: number;
+    totalApproved: number;
+    totalAllocated: number;
+    totalCompleted: number;
   };
-  requestStats: {
-    pending: number;
-    approved: number;
-    rejected: number;
-    allocated: number;
-    completed: number;
-  };
+  requestStats: Array<{
+    _id: string;
+    count: number;
+    totalAmount: number;
+  }>;
   recentTransactions: Array<{
-    id: string;
-    type: string;
+    _id: string;
     amount: number;
-    vendor: string;
-    status: string;
-    timestamp: string;
-    blockchainTxHash?: string;
+    description: string;
+    project: string;
+    department: string;
+    verificationStatus: string;
+    approvalStatus: string;
+    createdAt: string;
+    createdBy: {
+      fullName: string;
+      email: string;
+    };
   }>;
   blockchainStats: {
     totalTransactions: number;
@@ -69,18 +74,30 @@ export default function AdminDashboard() {
       if (showRefreshing) setRefreshing(true);
       else setLoading(true);
       
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/dashboard`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch dashboard data');
-      const data = await response.json();
-      setDashboardData(data.data);
-      setError(null);
+      // Use the API client instead of direct fetch
+      const response = await apiClient.getDashboard();
+      
+      if (response.success && response.data) {
+        // Transform the backend data to match our expected interface
+        const transformedData: DashboardData = {
+          overview: response.data.overview,
+          requestStats: response.data.requestStats || [],
+          recentTransactions: response.data.recentTransactions || [],
+          blockchainStats: {
+            totalTransactions: response.data.overview?.totalTransactions || 0,
+            confirmedTransactions: (response.data.overview?.totalTransactions || 0) - (response.data.requestStats?.find((s: any) => s._id === 'pending')?.count || 0),
+            pendingTransactions: response.data.requestStats?.find((s: any) => s._id === 'pending')?.count || 0,
+            averageConfirmationTime: 2.5 // Placeholder value
+          }
+        };
+        
+        setDashboardData(transformedData);
+        setError(null);
+      } else {
+        throw new Error(response.error || 'Failed to fetch dashboard data');
+      }
     } catch (err) {
+      console.error('Dashboard fetch error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
@@ -145,6 +162,16 @@ export default function AdminDashboard() {
     );
   }
 
+  const getRequestStat = (state: string) => {
+    const stat = dashboardData?.requestStats.find(s => s._id === state);
+    return stat ? stat.count : 0;
+  };
+
+  const getTotalAmountByState = (state: string) => {
+    const stat = dashboardData?.requestStats.find(s => s._id === state);
+    return stat ? stat.totalAmount : 0;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -175,9 +202,9 @@ export default function AdminDashboard() {
             <div className="flex items-center">
               <DollarSign className="h-8 w-8 text-green-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Budget</p>
+                <p className="text-sm font-medium text-gray-600">Total Requests</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(dashboardData.overview.totalBudget)}
+                  {dashboardData?.overview.totalRequests || 0}
                 </p>
               </div>
             </div>
@@ -187,9 +214,9 @@ export default function AdminDashboard() {
             <div className="flex items-center">
               <TrendingUp className="h-8 w-8 text-blue-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Allocated</p>
+                <p className="text-sm font-medium text-gray-600">Total Approved</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(dashboardData.overview.allocatedBudget)}
+                  {formatCurrency(getTotalAmountByState('approved'))}
                 </p>
               </div>
             </div>
@@ -199,9 +226,9 @@ export default function AdminDashboard() {
             <div className="flex items-center">
               <CheckCircle className="h-8 w-8 text-emerald-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Released</p>
+                <p className="text-sm font-medium text-gray-600">Total Allocated</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(dashboardData.overview.releasedBudget)}
+                  {formatCurrency(getTotalAmountByState('allocated'))}
                 </p>
               </div>
             </div>
@@ -211,9 +238,9 @@ export default function AdminDashboard() {
             <div className="flex items-center">
               <FileText className="h-8 w-8 text-yellow-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Pending</p>
+                <p className="text-sm font-medium text-gray-600">Pending Requests</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {dashboardData.overview.pendingRequests}
+                  {getRequestStat('pending')}
                 </p>
               </div>
             </div>
@@ -223,9 +250,9 @@ export default function AdminDashboard() {
             <div className="flex items-center">
               <Users className="h-8 w-8 text-purple-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Vendors</p>
+                <p className="text-sm font-medium text-gray-600">Active Vendors</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {dashboardData.overview.totalVendors}
+                  {dashboardData?.overview.activeVendors || 0}
                 </p>
               </div>
             </div>
@@ -233,155 +260,232 @@ export default function AdminDashboard() {
 
           <div className="bg-white rounded-lg shadow-sm p-6 border">
             <div className="flex items-center">
-              <Settings className="h-8 w-8 text-indigo-600" />
+              <Settings className="h-8 w-8 text-gray-600" />
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Active</p>
+                <p className="text-sm font-medium text-gray-600">Total Transactions</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {dashboardData.overview.activeAllocations}
+                  {dashboardData?.overview.totalTransactions || 0}
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Status Overview and Trust Ledger Stats */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-          <div className="bg-white rounded-lg shadow-sm border">
-            <div className="p-6 border-b">
-              <h3 className="text-lg font-semibold text-gray-900">Request Status Overview</h3>
-            </div>
-            <div className="p-6 space-y-4">
-              {Object.entries(dashboardData.requestStats).map(([status, count]) => (
-                <div key={status} className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    {getStatusIcon(status)}
-                    <span className="ml-3 text-sm font-medium text-gray-700 capitalize">{status}</span>
-                  </div>
-                  <span className="text-sm font-bold text-gray-900">{count}</span>
-                </div>
-              ))}
+        {/* Request Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+          <div className="bg-white rounded-lg shadow-sm p-6 border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Pending</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {getRequestStat('pending')}
+                </p>
+              </div>
+              <Clock className="h-8 w-8 text-yellow-500" />
             </div>
           </div>
 
+          <div className="bg-white rounded-lg shadow-sm p-6 border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Approved</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {getRequestStat('approved')}
+                </p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-blue-500" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Rejected</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {getRequestStat('rejected')}
+                </p>
+              </div>
+              <XCircle className="h-8 w-8 text-red-500" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Allocated</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {getRequestStat('allocated')}
+                </p>
+              </div>
+              <DollarSign className="h-8 w-8 text-green-500" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm p-6 border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Completed</p>
+                <p className="text-2xl font-bold text-emerald-600">
+                  {getRequestStat('completed')}
+                </p>
+              </div>
+              <CheckCircle className="h-8 w-8 text-emerald-500" />
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Activity and Blockchain Stats */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Recent Transactions */}
           <div className="bg-white rounded-lg shadow-sm border">
             <div className="p-6 border-b">
-              <h3 className="text-lg font-semibold text-gray-900">Trust Ledger Status</h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">Recent Transactions</h3>
+                <button className="text-sm text-blue-600 hover:text-blue-800">
+                  View All
+                </button>
+              </div>
             </div>
-            <div className="p-6">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {dashboardData?.recentTransactions.map((transaction) => (
+                    <tr 
+                      key={transaction._id} 
+                      className="hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setSelectedTransactionId(transaction._id)}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 capitalize">
+                        {transaction.project || 'General'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {transaction.createdBy?.fullName || 'Unknown'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                        {formatCurrency(transaction.amount)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          {getStatusIcon(transaction.approvalStatus)}
+                          <span className="ml-2 text-sm text-gray-700 capitalize">{transaction.approvalStatus}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {formatDate(transaction.createdAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Blockchain Stats */}
+          <div className="bg-white rounded-lg shadow-sm border">
+            <div className="p-6 border-b">
+              <h3 className="text-lg font-semibold text-gray-900">Blockchain Statistics</h3>
+            </div>
+            <div className="p-6 space-y-6">
               <div className="grid grid-cols-2 gap-4">
-                <div className="text-center p-4 bg-blue-50 rounded-lg">
-                  <p className="text-2xl font-bold text-blue-600">
-                    {dashboardData.blockchainStats.totalTransactions}
-                  </p>
-                  <p className="text-sm text-blue-800">Total Transactions</p>
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <div className="rounded-full bg-blue-100 p-2">
+                      <FileText className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Total Transactions</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {dashboardData?.blockchainStats.totalTransactions || 0}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-center p-4 bg-green-50 rounded-lg">
-                  <p className="text-2xl font-bold text-green-600">
-                    {dashboardData.blockchainStats.confirmedTransactions}
-                  </p>
-                  <p className="text-sm text-green-800">Confirmed</p>
+
+                <div className="bg-green-50 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <div className="rounded-full bg-green-100 p-2">
+                      <CheckCircle className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Confirmed</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {dashboardData?.blockchainStats.confirmedTransactions || 0}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                  <p className="text-2xl font-bold text-yellow-600">
-                    {dashboardData.blockchainStats.pendingTransactions}
-                  </p>
-                  <p className="text-sm text-yellow-800">Pending</p>
+
+                <div className="bg-yellow-50 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <div className="rounded-full bg-yellow-100 p-2">
+                      <Clock className="h-6 w-6 text-yellow-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Pending</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {dashboardData?.blockchainStats.pendingTransactions || 0}
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <div className="text-center p-4 bg-purple-50 rounded-lg">
-                  <p className="text-2xl font-bold text-purple-600">
-                    {Math.round(dashboardData.blockchainStats.averageConfirmationTime)}s
-                  </p>
-                  <p className="text-sm text-purple-800">Avg. Confirmation</p>
+
+                <div className="bg-purple-50 rounded-lg p-4">
+                  <div className="flex items-center">
+                    <div className="rounded-full bg-purple-100 p-2">
+                      <TrendingUp className="h-6 w-6 text-purple-600" />
+                    </div>
+                    <div className="ml-4">
+                      <p className="text-sm font-medium text-gray-600">Avg Confirmation</p>
+                      <p className="text-2xl font-bold text-gray-900">
+                        {dashboardData?.blockchainStats.averageConfirmationTime || 0}s
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-4 border-t border-gray-200">
+                <h4 className="text-sm font-medium text-gray-900 mb-3">Transaction Overview</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Success Rate</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {dashboardData?.blockchainStats.totalTransactions && dashboardData.blockchainStats.totalTransactions > 0 
+                        ? Math.round((dashboardData.blockchainStats.confirmedTransactions / dashboardData.blockchainStats.totalTransactions) * 100) 
+                        : 0}%
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">Network Status</span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <div className="w-2 h-2 rounded-full bg-green-500 mr-1"></div>
+                      Operational
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-white rounded-lg shadow-sm border mb-8">
-          <div className="p-6 border-b">
-            <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
-          </div>
-          <div className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <button className="flex items-center justify-center p-4 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 rounded-lg transition-colors">
-                <Eye className="h-5 w-5 text-blue-600 mr-2" />
-                <span className="font-medium text-blue-800">Review Requests</span>
-              </button>
-              <button className="flex items-center justify-center p-4 bg-green-50 hover:bg-green-100 border-2 border-green-200 rounded-lg transition-colors">
-                <DollarSign className="h-5 w-5 text-green-600 mr-2" />
-                <span className="font-medium text-green-800">Allocate Funds</span>
-              </button>
-              <button className="flex items-center justify-center p-4 bg-purple-50 hover:bg-purple-100 border-2 border-purple-200 rounded-lg transition-colors">
-                <Download className="h-5 w-5 text-purple-600 mr-2" />
-                <span className="font-medium text-purple-800">Generate Report</span>
-              </button>
-              <button className="flex items-center justify-center p-4 bg-indigo-50 hover:bg-indigo-100 border-2 border-indigo-200 rounded-lg transition-colors">
-                <Users className="h-5 w-5 text-indigo-600 mr-2" />
-                <span className="font-medium text-indigo-800">Manage Vendors</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Transactions */}
-        <div className="bg-white rounded-lg shadow-sm border">
-          <div className="p-6 border-b">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Verified Transactions</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vendor</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {dashboardData.recentTransactions.map((transaction) => (
-                  <tr 
-                    key={transaction.id} 
-                    className="hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => setSelectedTransactionId(transaction.id)}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 capitalize">
-                      {transaction.type}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                      {formatCurrency(transaction.amount)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {transaction.vendor}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        {getStatusIcon(transaction.status)}
-                        <span className="ml-2 text-sm text-gray-700 capitalize">{transaction.status}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {formatDate(transaction.timestamp)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {/* Transaction Detail Modal */}
+        {selectedTransactionId && (
+          <TransactionDetailModal
+            transaction={state.transactions.find(t => t.id === selectedTransactionId) || null}
+            isOpen={!!selectedTransactionId}
+            onClose={() => setSelectedTransactionId(null)}
+          />
+        )}
       </div>
-
-      {/* Transaction Detail Modal */}
-      {selectedTransactionId && (
-        <TransactionDetailModal
-          transaction={state.transactions.find(t => t.id === selectedTransactionId) || null}
-          isOpen={!!selectedTransactionId}
-          onClose={() => setSelectedTransactionId(null)}
-        />
-      )}
     </div>
   );
 }

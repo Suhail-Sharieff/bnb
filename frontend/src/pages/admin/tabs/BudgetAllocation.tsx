@@ -131,11 +131,32 @@ export default function BudgetAllocation() {
 
       if (response.success) {
         const vendor = availableVendors.find(v => v._id === allocationData.vendorId);
-        alert(`✅ Funds Allocated Successfully!
+      
+        // Show blockchain transaction details
+        let transactionMessage = `✅ Funds Allocated Successfully!
 
 Project: ${selectedRequest.title}
 Amount: $${allocationData.allocatedAmount.toLocaleString()}
-Vendor: ${vendor?.companyName || 'Unknown'}`);
+Vendor: ${vendor?.companyName || 'Unknown'}`;
+
+        // Add blockchain transaction details if available
+        if (response.transaction) {
+          const explorerUrl = response.transaction.transactionHash 
+            ? apiClient.getBlockchainExplorerUrl(response.transaction.transactionHash, response.transaction.networkName || 'sepolia')
+            : 'N/A';
+          
+          transactionMessage += `
+
+Blockchain Transaction Details:
+Transaction Hash: ${response.transaction.transactionHash || 'N/A'}
+Block Number: ${response.transaction.blockNumber || 'N/A'}
+Network: ${response.transaction.networkName || 'sepolia'} (Sepolia)
+Gas Used: ${response.transaction.gasUsed || 'N/A'}
+Contract Address: ${response.transaction.contractAddress || 'N/A'}
+Explorer URL: ${explorerUrl}`;
+        }
+
+        alert(transactionMessage);
         setShowAllocationModal(false);
         setAllocationData({ vendorId: '', allocatedAmount: 0 });
         loadBudgetRequests(); // Refresh the list

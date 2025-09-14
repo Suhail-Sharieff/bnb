@@ -17,6 +17,7 @@ const adminRoutes = require('./routes/admin');
 const vendorRoutes = require('./routes/vendor');
 const budgetRequestRoutes = require('./routes/budgetRequests');
 const notificationRoutes = require('./routes/notifications');
+const blockchainRoutes = require('./routes/blockchain');
 // const reportsRoutes = require('./routes/reports'); // Temporarily disabled
 
 const app = express();
@@ -122,6 +123,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/vendor', vendorRoutes);
 app.use('/api/budget-requests', budgetRequestRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/blockchain', blockchainRoutes);
 // app.use('/api/admin', reportsRoutes); // Temporarily disabled
 
 // Health check endpoint

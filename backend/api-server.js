@@ -739,6 +739,23 @@ app.get('/api/docs', (req, res) => {
     });
 });
 
+const adminRoutes = require('./routes/admin');
+const vendorRoutes = require('./routes/vendor');
+const budgetRequestRoutes = require('./routes/budgetRequests');
+const budgetFlowRoutes = require('./routes/budgetFlow');
+
+// Admin routes
+app.use('/api/admin', adminRoutes);
+
+// Vendor routes
+app.use('/api/vendor', vendorRoutes);
+
+// Budget Request routes
+app.use('/api/budget-requests', budgetRequestRoutes);
+
+// Budget Flow routes
+app.use('/api/budget-flow', budgetFlowRoutes);
+
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error('API Error:', err);
