@@ -473,6 +473,55 @@ router.get('/wallet', authenticate, isVendor, asyncHandler(async (req, res) => {
   });
 }));
 
+// @desc    Get vendor transactions
+// @route   GET /api/vendor/transactions
+// @access  Private/Vendor
+router.get('/transactions', authenticate, isVendor, asyncHandler(async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+    
+    // Filter transactions for this vendor
+    const filter = {
+      $or: [
+        { vendorAddress: req.user.walletAddress },
+        { createdBy: req.user._id }
+      ]
+    };
+    
+    if (req.query.status) filter.verificationStatus = req.query.status;
+    if (req.query.project) filter.project = new RegExp(req.query.project, 'i');
+    
+    const transactions = await BudgetTransaction.find(filter)
+      .populate('createdBy', 'fullName email')
+      .populate('approvedBy', 'fullName email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    
+    const total = await BudgetTransaction.countDocuments(filter);
+    
+    res.status(200).json({
+      success: true,
+      data: transactions,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching vendor transactions:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch transactions',
+      error: error.message
+    });
+  }
+}));
+
 // @desc    Update vendor profile
 // @route   PUT /api/vendor/profile
 // @access  Private/Vendor

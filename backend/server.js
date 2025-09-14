@@ -18,6 +18,7 @@ const vendorRoutes = require('./routes/vendor');
 const budgetRequestRoutes = require('./routes/budgetRequests');
 const notificationRoutes = require('./routes/notifications');
 const blockchainRoutes = require('./routes/blockchain');
+const mlAnalysisRoutes = require('./routes/mlAnalysis');
 // const reportsRoutes = require('./routes/reports'); // Temporarily disabled
 
 const app = express();
@@ -124,6 +125,7 @@ app.use('/api/vendor', vendorRoutes);
 app.use('/api/budget-requests', budgetRequestRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/blockchain', blockchainRoutes);
+app.use('/api/ml', mlAnalysisRoutes);
 // app.use('/api/admin', reportsRoutes); // Temporarily disabled
 
 // Health check endpoint
@@ -149,6 +151,8 @@ app.get('/api', (req, res) => {
       vendor: '/api/vendor',
       budgetRequests: '/api/budget-requests',
       notifications: '/api/notifications',
+      blockchain: '/api/blockchain',
+      ml: '/api/ml',
       health: '/api/health'
     },
     documentation: 'https://docs.example.com',
@@ -164,6 +168,38 @@ app.get('/api/verify-report', (req, res) => {
     instructions: 'POST report hash to verify blockchain authenticity',
     supportedNetworks: ['sepolia', 'amoy', 'mumbai', 'polygon', 'mainnet']
   });
+});
+
+// Wallet balance endpoint
+app.get('/api/balance', async (req, res) => {
+  try {
+    // Check if user is authenticated
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required'
+      });
+    }
+
+    // For demo purposes, return a simulated balance
+    // In a real implementation, this would connect to blockchain
+    res.status(200).json({
+      success: true,
+      data: {
+        address: '0x742d35Cc6634C0532925a3b8D4C9db96C4b4d8b6',
+        balance: '1.25',
+        currency: 'ETH',
+        network: process.env.NETWORK_NAME || 'sepolia'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get balance',
+      error: error.message
+    });
+  }
 });
 
 // Socket.IO connection handling

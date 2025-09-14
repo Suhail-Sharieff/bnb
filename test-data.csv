@@ -1,0 +1,11 @@
+Department,Category,Amount,Date,Description
+Engineering,Software,50000,2023-01-15,Software development tools
+Marketing,Digital Ads,25000,2023-01-20,Google Ads campaign
+HR,Recruitment,15000,2023-02-01,Recruitment platform subscription
+Finance,Compliance,10000,2023-02-05,Audit services
+Operations,Equipment,75000,2023-02-10,Office equipment purchase
+Engineering,Hardware,30000,2023-02-15,Development servers
+Marketing,Events,20000,2023-03-01,Trade show participation
+HR,Training,12000,2023-03-05,Employee training program
+Finance,Software,8000,2023-03-10,Financial reporting software
+Operations,Supplies,5000,2023-03-15,Office supplies

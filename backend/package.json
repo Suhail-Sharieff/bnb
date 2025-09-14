@@ -11,6 +11,8 @@
     "server": "node server.js",
     "blockchain:deploy": "node scripts/deployContracts.js",
     "db:seed": "node scripts/seedDatabase.js",
+    "db:clear": "node scripts/clearDatabase.js",
+    "api:test": "node scripts/testAdminAPI.js",
     "stress:test": "node scripts/stressTest.js"
   },
   "keywords": [

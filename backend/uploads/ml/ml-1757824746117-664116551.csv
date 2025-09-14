@@ -1,0 +1,6 @@
+Project,Amount,Requester,Department,Priority,Status,Created,Description
+"Product Research Initiative",75000,"Admin User","R&D",urgent,allocated,Sep 14, 2025,"Research and development for next-generation product line."
+"Warehouse Management System",35000,"Admin User","Operations",high,completed,Sep 14, 2025,"Implement new WMS to streamline inventory management."
+"Employee Training Program",15000,"Admin User","HR",medium,allocated,Sep 14, 2025,"Implement comprehensive training program for new employees."
+"Digital Marketing Campaign Q4",25000,"Admin User","Marketing",medium,allocated,Sep 14, 2025,"Launch comprehensive digital marketing campaign for Q4 sales push."
+"Server Infrastructure Upgrade",50000,"Admin User","IT",high,allocated,Sep 14, 2025,"Upgrade server infrastructure to support increased workload and improve performance."
